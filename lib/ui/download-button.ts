@@ -16,7 +16,7 @@ const ICONS: Record<State, string> = {
 };
 
 const STYLE = `
-  :host { all: initial; position: absolute; top: 10px; right: 10px; z-index: 10;
+  :host { all: initial; position: absolute; bottom: 10px; left: 10px; z-index: 10;
     opacity: 0; transition: opacity .15s; pointer-events: none; }
   :host([visible]), :host([state="loading"]), :host([state="done"]), :host([state="error"]) {
     opacity: 1; pointer-events: auto; }
@@ -41,7 +41,7 @@ export interface DownloadButtonOptions {
 }
 
 /**
- * Ставит кнопку в правый верхний угол контейнера и показывает её при наведении.
+ * Ставит кнопку в левый нижний угол контейнера и показывает её при наведении.
  * Возвращает `null`, если кнопка там уже есть.
  */
 export function attachDownloadButton(

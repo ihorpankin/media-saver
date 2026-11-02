@@ -1,32 +1,37 @@
+import { createPostCache } from '@/lib/content/post-cache';
 import type { MediaPost } from '@/lib/core/media';
-import type { DownloadRequest, DownloadResponse } from '@/lib/core/messages';
+import { isPageMessage, type DownloadRequest, type DownloadResponse } from '@/lib/core/messages';
 import { attachDownloadButton } from '@/lib/ui/download-button';
 
-// ВРЕМЕННО (задача 0.4): кнопка на постах ленты, данные берутся прямо из DOM (способ A, только фото).
-// Нужно, чтобы проверить кнопку и скачивание в настоящем Chrome. На этапе 1 заменим на экстрактор
-// с перехватом данных страницы.
+// Данные постов приходят от перехватчика (instagram-page.content.ts) и копятся в кэше.
+// Кнопка пока ставится только на посты ленты; сетка профиля, Reels и сторис — задачи 1.7–1.9.
+// Если поста нет в кэше, работает запасной путь через DOM (только фото).
+
+const cache = createPostCache();
 
 function shortcodeOf(article: Element): string | undefined {
   const link = article.querySelector<HTMLAnchorElement>('a[href*="/p/"], a[href*="/reel/"]');
   return link?.getAttribute('href')?.match(/\/(?:p|reel)\/([\w-]+)/)?.[1];
 }
 
-/** Загруженные крупные картинки поста (аватарки и превью отсекаем по размеру). */
-function postImages(article: Element): HTMLImageElement[] {
-  return [...article.querySelectorAll('img')].filter(
-    (img) => img.complete && img.naturalWidth >= 300 && img.getBoundingClientRect().height > 100,
+/** Загруженные крупные фото и видео поста (аватарки и превью отсекаем по размеру). */
+function postMedia(article: Element): HTMLElement[] {
+  return [...article.querySelectorAll<HTMLImageElement | HTMLVideoElement>('img, video')].filter(
+    (el) =>
+      el.getBoundingClientRect().height > 100 &&
+      (el instanceof HTMLVideoElement || (el.complete && el.naturalWidth >= 300)),
   );
 }
 
 /**
  * Блок, куда ставить кнопку. Прямой родитель картинки не подходит: поверх него Instagram
  * кладёт прозрачный слой-соседа, который перехватывает мышь. Берём самого верхнего предка
- * того же размера, что и картинка: он содержит и картинку, и этот слой.
+ * того же размера, что и медиа: он содержит и медиа, и этот слой.
  */
-function mediaBox(img: HTMLImageElement, article: Element): HTMLElement {
-  const target = img.getBoundingClientRect();
-  let box: HTMLElement = img.parentElement ?? img;
-  for (let el = img.parentElement; el && el !== article; el = el.parentElement) {
+function mediaBox(media: HTMLElement, article: Element): HTMLElement {
+  const target = media.getBoundingClientRect();
+  let box: HTMLElement = media.parentElement ?? media;
+  for (let el = media.parentElement; el && el !== article; el = el.parentElement) {
     const r = el.getBoundingClientRect();
     if (Math.abs(r.width - target.width) < 2 && Math.abs(r.height - target.height) < 2) box = el;
   }
@@ -43,19 +48,19 @@ function translateX(el: Element): number {
  */
 function visibleSlide(article: Element, box: HTMLElement) {
   const view = box.getBoundingClientRect();
-  const overlap = (img: HTMLImageElement) => {
-    const r = img.getBoundingClientRect();
+  const overlap = (el: HTMLElement) => {
+    const r = el.getBoundingClientRect();
     return Math.max(0, Math.min(r.right, view.right) - Math.max(r.left, view.left));
   };
-  const img = postImages(article).sort((a, b) => overlap(b) - overlap(a))[0];
-  const li = img?.closest('li');
-  if (!img || !li) return img && { img, index: 1, total: 1 };
+  const media = postMedia(article).sort((a, b) => overlap(b) - overlap(a))[0];
+  const li = media?.closest('li');
+  if (!media || !li) return media && { media, index: 1, total: 1 };
   const width = li.getBoundingClientRect().width;
   const sentinel = [...(li.parentElement?.children ?? [])].find(
     (el) => el.getBoundingClientRect().width <= 1,
   );
   return {
-    img,
+    media,
     index: Math.round(translateX(li) / width) + 1,
     total: sentinel ? Math.round(translateX(sentinel) / width) : undefined,
   };
@@ -71,9 +76,15 @@ function authorOf(article: Element): string | undefined {
     .find(({ name, text }) => name && text?.trim() === name)?.name;
 }
 
-function collectPost(article: Element, box: HTMLElement, postId: string): MediaPost {
-  const slide = visibleSlide(article, box);
-  if (!slide) throw new Error('не нашёл картинку (видео пока не поддерживается)');
+/** Запасной путь (A): видимое фото прямо из DOM. Видео так не скачать — у него blob-ссылка. */
+function postFromDom(
+  article: Element,
+  postId: string,
+  slide: { media: HTMLElement; index: number; total?: number },
+): MediaPost {
+  if (!(slide.media instanceof HTMLImageElement)) {
+    throw new Error('нет данных о видео — обновите страницу');
+  }
   return {
     site: 'instagram',
     postId,
@@ -84,16 +95,26 @@ function collectPost(article: Element, box: HTMLElement, postId: string): MediaP
         kind: 'image',
         mediaId: `${postId}-${slide.index}`,
         index: slide.index,
-        url: slide.img.currentSrc || slide.img.src,
+        url: slide.media.currentSrc || slide.media.src,
         ext: 'jpg',
       },
     ],
   };
 }
 
-async function download(post: MediaPost): Promise<void> {
-  const request: DownloadRequest = { type: 'download', post };
+async function downloadSlide(article: Element, box: HTMLElement, postId: string) {
+  const slide = visibleSlide(article, box);
+  if (!slide) throw new Error('не нашёл медиа в посте');
+
+  const cached = cache.get(postId);
+  const request: DownloadRequest = cached
+    ? { type: 'download', post: cached, indexes: [slide.index] }
+    : { type: 'download', post: postFromDom(article, postId, slide) };
+
   const response: DownloadResponse = await browser.runtime.sendMessage(request);
+  if (response.completed === 0 && response.errors.length === 0) {
+    throw new Error(`нет слайда №${slide.index} в данных поста`);
+  }
   if (response.errors.length > 0) {
     throw new Error(response.errors.map((e) => `#${e.index}: ${e.error}`).join('; '));
   }
@@ -106,30 +127,45 @@ function scan() {
   for (const article of document.querySelectorAll('article')) {
     if (buttons.get(article)?.isConnected) continue;
     const postId = shortcodeOf(article);
-    const img = postImages(article)[0];
-    if (!postId || !img) continue;
-    const box = mediaBox(img, article);
+    const media = postMedia(article)[0];
+    if (!postId || !media) continue;
+    const box = mediaBox(media, article);
     const host = attachDownloadButton(box, {
-      title: 'Скачать этот слайд (временная версия, только фото)',
-      onClick: () => download(collectPost(article, box, postId)),
+      title: 'Скачать этот слайд',
+      onClick: () => downloadSlide(article, box, postId),
     });
     if (host) buttons.set(article, host);
   }
 }
 
+function watchDom() {
+  let scheduled = false;
+  // Instagram — SPA: посты появляются и перерисовываются постоянно, пересканируем не чаще раза за кадр
+  new MutationObserver(() => {
+    if (scheduled) return;
+    scheduled = true;
+    requestAnimationFrame(() => {
+      scheduled = false;
+      scan();
+    });
+  }).observe(document.body, { childList: true, subtree: true });
+  scan();
+}
+
 export default defineContentScript({
   matches: ['*://*.instagram.com/*'],
+  // Слушаем перехватчик с самого начала: встроенный JSON он разбирает ещё до загрузки DOM
+  runAt: 'document_start',
   main() {
-    let scheduled = false;
-    // Instagram — SPA: посты появляются и перерисовываются постоянно, пересканируем не чаще раза за кадр
-    new MutationObserver(() => {
-      if (scheduled) return;
-      scheduled = true;
-      requestAnimationFrame(() => {
-        scheduled = false;
-        scan();
-      });
-    }).observe(document.body, { childList: true, subtree: true });
-    scan();
+    window.addEventListener('message', (event) => {
+      if (event.source !== window || !isPageMessage(event.data)) return;
+      for (const post of event.data.posts) cache.add(post);
+    });
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', watchDom, { once: true });
+    } else {
+      watchDom();
+    }
   },
 });
