@@ -22,7 +22,13 @@ import { downloadThumbnail } from './youtube';
 
 const ROOT = 'media-saver';
 // Сайты, где работает подменю «Media Saver ▸ Скачать…»: у их content script есть обработчик
-const PAGES = ['*://*.instagram.com/*', '*://x.com/*', '*://twitter.com/*', '*://www.tiktok.com/*'];
+const PAGES = [
+  '*://*.instagram.com/*',
+  '*://x.com/*',
+  '*://twitter.com/*',
+  '*://www.tiktok.com/*',
+  '*://www.linkedin.com/*',
+];
 
 const DOWNLOADS: Array<[id: string, mode: DownloadMode, title: string]> = [
   ['download-slide', 'slide', 'Скачать'],

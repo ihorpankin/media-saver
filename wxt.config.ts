@@ -28,6 +28,9 @@ export default defineConfig({
       '*://*.tiktok.com/*',
       '*://*.tiktokcdn.com/*',
       '*://*.tiktokcdn-us.com/*',
+      '*://www.linkedin.com/*',
+      // фото LinkedIn
+      '*://media.licdn.com/*',
     ],
   },
   webExt: {
