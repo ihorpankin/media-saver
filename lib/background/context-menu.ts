@@ -1,5 +1,7 @@
 import type { ContextDownloadRequest, DownloadMode } from '@/lib/core/messages';
 import { loadSettings, settingsItem, type Settings } from '@/lib/core/settings';
+import { videoIdFromUrl } from '@/lib/sites/youtube/thumbnail';
+import { downloadThumbnail } from './youtube';
 
 /*
  * Контекстное меню по правому клику в Instagram:
@@ -72,7 +74,17 @@ async function build() {
     title: 'Все настройки…',
     contexts: ['image', 'video', 'page'],
   });
+
+  // YouTube: превью ролика — по правому клику на плитке в любой ленте или на странице ролика
+  browser.contextMenus.create({
+    id: YT_THUMBNAIL,
+    title: 'Скачать превью (Media Saver)',
+    contexts: ['link', 'image', 'video', 'page'],
+    documentUrlPatterns: ['*://*.youtube.com/*'],
+  });
 }
+
+const YT_THUMBNAIL = 'youtube-thumbnail';
 
 /** Отметки в меню отражают настройки, даже если их поменяли на странице настроек. */
 function syncChecks(settings: Settings) {
@@ -93,6 +105,18 @@ export function setupContextMenu() {
 
   browser.contextMenus.onClicked.addListener((info, tab) => {
     const id = String(info.menuItemId);
+
+    if (id === YT_THUMBNAIL) {
+      // Плитка ролика — ссылка на него; если кликнули не по плитке, берём ролик со страницы
+      const videoId =
+        videoIdFromUrl(info.linkUrl) ?? videoIdFromUrl(info.srcUrl) ?? videoIdFromUrl(info.pageUrl);
+      if (videoId) {
+        void downloadThumbnail(videoId).then((r) => {
+          if (r.errors.length) console.warn('[media-saver] превью не скачалось:', r.errors);
+        });
+      }
+      return;
+    }
 
     const download = DOWNLOADS.find(([itemId]) => itemId === id);
     if (download && tab?.id !== undefined) {

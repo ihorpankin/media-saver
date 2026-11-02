@@ -2,5 +2,9 @@ node_modules/
 .output/
 .wxt/
 .chrome-profile/
+# Манифест хелпера с абсолютным путём, его создаёт native-host/install.ps1
+native-host/com.media_saver.ytdlp.json
 *.log
 .DS_Store
+native-host/host-run.bat
+native-host/host-config.json

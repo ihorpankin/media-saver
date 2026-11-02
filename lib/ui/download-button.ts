@@ -26,6 +26,8 @@ const BASE_STYLE = `
   button:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; border-radius: 6px; }
   button:disabled { cursor: default; opacity: .6; }
   .all[hidden], .original[hidden] { display: none; }
+  .label:empty { display: none; }
+  .label { font-variant-numeric: tabular-nums; }
   .original { font-size: 11px; letter-spacing: .02em; padding: 3px 6px;
     border: 1.5px solid currentColor; border-radius: 6px; }
   svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 2;
@@ -68,6 +70,8 @@ export interface DownloadButtonOptions {
   /** Что делать по клику. Ошибка из промиса покажется в подсказке кнопки. */
   onClick: () => Promise<void>;
   title?: string;
+  /** Подпись рядом с иконкой, например «Видео». Во время скачивания её место занимает процент. */
+  label?: string;
   /** Кнопка «Все N». Показывается, только если `count()` больше 1. */
   all?: {
     count: () => number | undefined;
@@ -94,6 +98,13 @@ export function setWaiting(host: HTMLElement, waiting: boolean) {
   waitingSetters.get(host)?.(waiting);
 }
 
+/** Обновление процента во время долгого скачивания (видео YouTube через yt-dlp). */
+const progressSetters = new WeakMap<HTMLElement, (percent: number) => void>();
+
+export function setProgress(host: HTMLElement, percent: number) {
+  progressSetters.get(host)?.(percent);
+}
+
 /** Какое действие кнопки запустить извне. */
 export type ButtonAction = 'slide' | 'all' | 'original';
 
@@ -112,29 +123,37 @@ export function triggerDownload(host: HTMLElement, action: ButtonAction = 'slide
 
 function createControl(
   style: string,
-  { onClick, title = 'Скачать', all, original }: DownloadButtonOptions,
+  { onClick, title = 'Скачать', label, all, original }: DownloadButtonOptions,
 ): Control {
   const host = document.createElement('media-saver-button');
   const shadow = host.attachShadow({ mode: 'closed' });
   shadow.innerHTML = `<style>${BASE_STYLE}${style}</style>
-    <button type="button" class="main"><svg viewBox="0 0 24 24"></svg></button>
+    <button type="button" class="main"><svg viewBox="0 0 24 24"></svg><span class="label"></span></button>
     <button type="button" class="all" hidden></button>
     <button type="button" class="original" hidden></button>`;
   const mainButton = shadow.querySelector<HTMLButtonElement>('.main')!;
   const allButton = shadow.querySelector<HTMLButtonElement>('.all')!;
   const originalButton = shadow.querySelector<HTMLButtonElement>('.original')!;
   const svg = shadow.querySelector('svg')!;
+  const labelSpan = shadow.querySelector<HTMLElement>('.label')!;
 
   let resetTimer: ReturnType<typeof setTimeout> | undefined;
   const setState = (state: State, tooltip = title) => {
     host.setAttribute('state', state);
     svg.innerHTML = ICONS[state];
+    labelSpan.textContent = label ?? '';
     mainButton.title = tooltip;
     mainButton.setAttribute('aria-label', tooltip);
     allButton.disabled = state === 'loading';
     originalButton.disabled = state === 'loading';
   };
   setState('idle');
+
+  progressSetters.set(host, (percent) => {
+    if (host.getAttribute('state') !== 'loading') return;
+    labelSpan.textContent = `${percent}%`;
+    mainButton.title = `Скачивается… ${percent}%`;
+  });
 
   waitingSetters.set(host, (waiting) => {
     const state = host.getAttribute('state');

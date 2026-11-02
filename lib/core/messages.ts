@@ -62,8 +62,34 @@ export interface HarvestResultRequest {
   post: MediaPost;
 }
 
+/** Скачать превью ролика YouTube в максимальном разрешении. */
+export interface YoutubeThumbnailRequest {
+  type: 'youtube-thumbnail';
+  videoId: string;
+  /** Название канала — для папки. */
+  author?: string;
+}
+
+/** Скачать ролик YouTube через yt-dlp. Ответ — DownloadResponse, прогресс — YoutubeProgressMessage. */
+export interface YoutubeVideoRequest {
+  type: 'youtube-video';
+  url: string;
+}
+
+/** Background → вкладка: сколько процентов ролика скачано. */
+export interface YoutubeProgressMessage {
+  type: 'youtube-progress';
+  url: string;
+  percent: number;
+}
+
 export type BackgroundRequest =
-  DownloadRequest | OriginalRequest | HarvestCheckRequest | HarvestResultRequest;
+  | YoutubeVideoRequest
+  | DownloadRequest
+  | OriginalRequest
+  | HarvestCheckRequest
+  | HarvestResultRequest
+  | YoutubeThumbnailRequest;
 
 // ---- Background → content script (tabs.sendMessage) ----
 
