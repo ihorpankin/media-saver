@@ -9,6 +9,7 @@ npm install
 npm run dev      # открывает отдельный Chrome с расширением и горячей перезагрузкой
 npm run build    # сборка в .output/chrome-mv3
 npm run compile  # проверка типов
+npm test         # тесты (vitest)
 npm run lint
 npm run format
 ```
