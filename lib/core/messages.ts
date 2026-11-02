@@ -39,4 +39,10 @@ export interface DownloadRequest {
 
 export type BackgroundRequest = DownloadRequest;
 
-export type DownloadResponse = { ok: true; started: number } | { ok: false; error: string };
+/** Ответ приходит, когда все файлы скачались или упали. */
+export interface DownloadResponse {
+  /** Сколько файлов скачано. */
+  completed: number;
+  /** Ошибки по файлам, пустой массив — всё хорошо. */
+  errors: Array<{ index: number; error: string }>;
+}
