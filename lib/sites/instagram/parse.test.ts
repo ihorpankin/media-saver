@@ -151,6 +151,11 @@ describe('parseInstagram', () => {
     expect(parseInstagram(inline)).toHaveLength(1);
   });
 
+  it('видео без video_versions не превращается в обложку', () => {
+    const coverOnly = { ...reel, video_versions: null };
+    expect(parseInstagram({ items: [coverOnly] })).toEqual([]);
+  });
+
   it('JSON без медиа', () => {
     expect(parseInstagram({ data: { viewer: { id: '1' } } })).toEqual([]);
     expect(parseInstagram(null)).toEqual([]);

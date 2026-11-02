@@ -32,6 +32,18 @@ describe('createPostCache', () => {
     expect(cache.get('a')?.items).toHaveLength(2);
   });
 
+  it('копия с видео важнее копии с крупной обложкой', () => {
+    const cache = createPostCache();
+    const video: MediaPost = {
+      site: 'instagram',
+      postId: 'a',
+      items: [{ kind: 'video', mediaId: 'a', index: 1, url: 'https://cdn/a.mp4', ext: 'mp4' }],
+    };
+    cache.add(video);
+    cache.add(post('a', [1080]));
+    expect(cache.get('a')?.items[0]?.kind).toBe('video');
+  });
+
   it('вытесняет самые старые посты сверх лимита', () => {
     const cache = createPostCache(2);
     cache.add(post('a', [1]));

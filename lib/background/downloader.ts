@@ -51,6 +51,7 @@ export async function handleDownload(
   results.forEach((result, i) => {
     if (result.status === 'rejected') {
       const error = result.reason instanceof Error ? result.reason.message : String(result.reason);
+      console.warn('[media-saver] не скачался файл', items[i]!.url, error);
       errors.push({ index: items[i]!.index, error });
     }
   });

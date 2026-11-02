@@ -112,6 +112,10 @@ function toItem(media: IgMedia, index: number): MediaItem | undefined {
     };
   }
 
+  // Видео без video_versions встречается в сокращённых ответах: там есть только обложка.
+  // Обложку под видом видео не отдаём — дождёмся полной копии поста
+  if (media.media_type === 2) return undefined;
+
   const image = bestCandidate(media.image_versions2?.candidates ?? []);
   if (!image) return undefined;
   return {
