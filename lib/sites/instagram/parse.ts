@@ -159,6 +159,18 @@ function toPost(media: IgMedia): MediaPost {
 export function parseInstagram(json: unknown): MediaPost[] {
   const posts: MediaPost[] = [];
   const walk = (node: unknown) => {
+    // Встроенные данные иногда хранят целый ответ API строкой (`__bbox.result.response`
+    // у Explore) — раскрываем такие строки, если в них есть медиа
+    if (typeof node === 'string') {
+      if (node.length > 100 && /^\s*[[{]/.test(node) && node.includes('image_versions2')) {
+        try {
+          walk(JSON.parse(node));
+        } catch {
+          // Не JSON — обычный текст
+        }
+      }
+      return;
+    }
     if (typeof node !== 'object' || node === null) return;
     if (Array.isArray(node)) {
       node.forEach(walk);

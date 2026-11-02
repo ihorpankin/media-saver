@@ -156,6 +156,17 @@ describe('parseInstagram', () => {
     expect(parseInstagram({ items: [coverOnly] })).toEqual([]);
   });
 
+  it('ответ API, вложенный строкой (первая порция Explore)', () => {
+    const inline = {
+      require: [
+        {
+          __bbox: { result: { response: JSON.stringify({ sectional_items: [{ media: story }] }) } },
+        },
+      ],
+    };
+    expect(parseInstagram(inline).map((p) => p.postId)).toEqual(['4021364098265521376']);
+  });
+
   it('JSON без медиа', () => {
     expect(parseInstagram({ data: { viewer: { id: '1' } } })).toEqual([]);
     expect(parseInstagram(null)).toEqual([]);

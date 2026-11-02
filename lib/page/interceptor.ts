@@ -77,13 +77,51 @@ function hookFetch(parser: PageDataParser, emit: Emit) {
 }
 
 /** Разбирает JSON, встроенный в HTML при первой загрузке страницы. */
-export function scanInlineData(parser: PageDataParser, emit: Emit, marker: string) {
-  for (const script of document.querySelectorAll('script[type="application/json"]')) {
-    const text = script.textContent ?? '';
-    // Дешёвая проверка до дорогого JSON.parse: большинство скриптов медиа не содержат
-    if (!text.includes(marker)) continue;
-    handle(parser, emit, () => parseJsonText(text));
-  }
+export function watchInlineData(parser: PageDataParser, emit: Emit, marker: string) {
+  // Instagram дописывает блоки данных в конец страницы и после DOMContentLoaded
+  // (так приходит, например, первая порция Explore), поэтому следим за ними всё время загрузки
+  const done = new WeakSet<Element>();
+  let scheduled = false;
+
+  const scan = () => {
+    scheduled = false;
+    for (const script of document.querySelectorAll('script[type="application/json"]')) {
+      if (done.has(script)) continue;
+      const text = script.textContent ?? '';
+      // Дешёвая проверка до дорогого JSON.parse: большинство скриптов медиа не содержат
+      if (!text.includes(marker)) continue;
+      try {
+        const json = parseJsonText(text);
+        // Помечаем только успешно разобранные: большой блок может прийти не целиком
+        done.add(script);
+        const posts = parser.parse(json);
+        if (posts.length > 0) emit(posts);
+      } catch {
+        // Блок ещё дописывается или это не наш формат — попробуем при следующем проходе
+      }
+    }
+  };
+  const schedule = () => {
+    if (scheduled) return;
+    scheduled = true;
+    setTimeout(scan, 0);
+  };
+
+  const observer = new MutationObserver((records) => {
+    if (records.some((r) => [...r.addedNodes].some((n) => n.nodeName === 'SCRIPT'))) schedule();
+  });
+  observer.observe(document.documentElement, { childList: true, subtree: true });
+  document.addEventListener('DOMContentLoaded', schedule, { once: true });
+  window.addEventListener(
+    'load',
+    () => {
+      scan();
+      // После загрузки встроенные блоки больше не появляются: дальше данные идут через XHR
+      observer.disconnect();
+    },
+    { once: true },
+  );
+  schedule();
 }
 
 export function installInterceptor(parser: PageDataParser, emit: Emit) {

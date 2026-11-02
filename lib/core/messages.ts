@@ -37,7 +37,33 @@ export interface DownloadRequest {
   indexes?: number[];
 }
 
-export type BackgroundRequest = DownloadRequest;
+/**
+ * Скачать оригинал. В ленте фото обрезаны до 1080px, а полный список размеров есть
+ * только на странице поста — background открывает её в фоновой вкладке и забирает данные.
+ */
+export interface OriginalRequest {
+  type: 'download-original';
+  /** Пост, как он есть в кэше страницы: из него берутся имя файла и номер. */
+  post: MediaPost;
+  index: number;
+}
+
+/** Content script спрашивает при загрузке: не открыт ли он ради оригинала? */
+export interface HarvestCheckRequest {
+  type: 'harvest-check';
+}
+
+/** Ответ на `harvest-check`: шорткод поста, данные которого нужно вернуть, или `null`. */
+export type HarvestCheckResponse = { postId: string } | null;
+
+/** Фоновая вкладка отдаёт полные данные поста. */
+export interface HarvestResultRequest {
+  type: 'harvest-result';
+  post: MediaPost;
+}
+
+export type BackgroundRequest =
+  DownloadRequest | OriginalRequest | HarvestCheckRequest | HarvestResultRequest;
 
 /** Ответ приходит, когда все файлы скачались или упали. */
 export interface DownloadResponse {

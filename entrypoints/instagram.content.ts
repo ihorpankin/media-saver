@@ -1,6 +1,12 @@
 import { createPostCache } from '@/lib/content/post-cache';
-import type { MediaPost } from '@/lib/core/media';
-import { isPageMessage, type DownloadRequest, type DownloadResponse } from '@/lib/core/messages';
+import { hasLargerOriginal, type MediaPost } from '@/lib/core/media';
+import {
+  isPageMessage,
+  type DownloadRequest,
+  type DownloadResponse,
+  type HarvestCheckResponse,
+  type OriginalRequest,
+} from '@/lib/core/messages';
 import {
   attachOverlayButton,
   createInlineButton,
@@ -26,14 +32,20 @@ function shortcodeFromHref(href: string | null | undefined): string | undefined 
 
 // ---- Медиа и слайды ----
 
+/**
+ * Крупное медиа по размеру на экране: аватарки и иконки меньше 100px. По natural-размеру
+ * судить нельзя — превью в Explore всего 240px в ширину, хотя на экране занимают 320px.
+ */
 function isLargeMedia(el: HTMLImageElement | HTMLVideoElement): boolean {
+  const r = el.getBoundingClientRect();
   return (
-    el.getBoundingClientRect().height > 100 &&
-    (el instanceof HTMLVideoElement || (el.complete && el.naturalWidth >= 300))
+    r.height > 100 &&
+    r.width > 100 &&
+    (el instanceof HTMLVideoElement || (el.complete && el.naturalWidth > 0))
   );
 }
 
-/** Загруженные крупные фото и видео (аватарки и превью отсекаем по размеру). */
+/** Загруженные крупные фото и видео (аватарки и иконки отсекаем по размеру). */
 function largeMedia(root: ParentNode): HTMLElement[] {
   return [...root.querySelectorAll<HTMLImageElement | HTMLVideoElement>('img, video')].filter(
     isLargeMedia,
@@ -171,7 +183,7 @@ function postFromDom(postId: string, slide: Slide, author: string | undefined): 
 
 // ---- Скачивание ----
 
-async function send(request: DownloadRequest): Promise<void> {
+async function send(request: DownloadRequest | OriginalRequest): Promise<void> {
   const response: DownloadResponse = await browser.runtime.sendMessage(request);
   if (response.errors.length > 0) {
     throw new Error(response.errors.map((e) => `#${e.index}: ${e.error}`).join('; '));
@@ -212,6 +224,24 @@ async function downloadAll(source: PostSource) {
   await send({ type: 'download', post });
 }
 
+/** Текущий слайд, если у него есть оригинал крупнее того, что пришло в ленту. */
+function largerOriginal(source: PostSource) {
+  const slide = visibleSlide(source.root(), source.postId());
+  const post = resolvePost(source, slide);
+  const item = slide && post?.items.find((i) => i.index === slide.index);
+  // Оригиналы берутся со страницы поста, а у сторис её нет — там и так полный размер
+  if (!post || !item || !hasLargerOriginal(item) || post.permalink?.includes('/stories/')) {
+    return undefined;
+  }
+  return { post, item };
+}
+
+async function downloadOriginal(source: PostSource) {
+  const found = largerOriginal(source);
+  if (!found) throw new Error('у этого слайда нет оригинала крупнее');
+  await send({ type: 'download-original', post: found.post, index: found.item.index });
+}
+
 function buttonOptions(source: PostSource, title = 'Скачать'): DownloadButtonOptions {
   return {
     title,
@@ -222,6 +252,20 @@ function buttonOptions(source: PostSource, title = 'Скачать'): DownloadBu
         return (id && cache.get(id)?.itemCount) || undefined;
       },
       onClick: () => downloadAll(source),
+    },
+    original: {
+      label: () => {
+        const found = largerOriginal(source);
+        if (!found) return undefined;
+        const { width, originalWidth } = found.item;
+        return {
+          text: `HD ${originalWidth}`,
+          title:
+            `Сейчас ${width}px, оригинал ${originalWidth}px. ` +
+            'Пост на пару секунд откроется в фоновой вкладке',
+        };
+      },
+      onClick: () => downloadOriginal(source),
     },
   };
 }
@@ -256,25 +300,48 @@ function insertButton(
   container.insertBefore(wrapper, before);
 }
 
+/** Куда в строке действий вставить кнопку. */
+interface RowSlot {
+  container: Element;
+  /** Перед каким элементом вставлять (`null` — в конец). */
+  before: Element | null;
+  /** Соседний элемент, чьи классы берём для отступов. */
+  template: Element;
+}
+
 /**
- * Строка действий поста: `section` из двух частей — слева лайк, комментарий, репост,
- * «поделиться», справа «сохранить».
+ * Строка действий поста — `section` с лайком, комментарием, репостом, «поделиться»
+ * и «сохранить». Бывает в двух видах:
+ *   - лента и страница поста: две группы, слева действия, справа «сохранить» → в конец левой;
+ *   - окно поста поверх ленты: все кнопки подряд, «сохранить» последняя → перед ней.
  */
-function actionRow(root: ParentNode): Element | undefined {
+function actionRow(root: ParentNode): RowSlot | undefined {
   for (const section of root.querySelectorAll('section')) {
-    const [left, right] = section.children;
-    if (section.children.length === 2 && left && right) {
-      if (svgButtons(left).length >= 3 && svgButtons(right).length === 1) return left;
+    const children = [...section.children];
+    const [left, right] = children;
+    if (children.length === 2 && left && right) {
+      if (svgButtons(left).length >= 3 && svgButtons(right).length === 1 && left.lastElementChild) {
+        return { container: left, before: null, template: left.lastElementChild };
+      }
+    }
+    const save = children.at(-1);
+    const share = children.at(-2);
+    if (children.length >= 4 && save && share && svgButtons(section).length >= 4) {
+      if (svgButtons(save).length === 1)
+        return { container: section, before: save, template: share };
     }
   }
   return undefined;
 }
 
-function attachToRow(row: Element, source: PostSource) {
-  if (hasOurButton(row)) return;
-  const template = row.lastElementChild;
-  if (!template) return;
-  insertButton(row, null, template, createInlineButton('row', buttonOptions(source)));
+function attachToRow(slot: RowSlot, source: PostSource) {
+  if (hasOurButton(slot.container)) return;
+  insertButton(
+    slot.container,
+    slot.before,
+    slot.template,
+    createInlineButton('row', buttonOptions(source)),
+  );
 }
 
 // ---- Места на странице ----
@@ -298,8 +365,9 @@ function scanFeed() {
 function scanPostPage() {
   if (!/\/(?:p|reel)\/[\w-]+/.test(location.pathname)) return;
   const postId = () => shortcodeFromHref(location.pathname);
+  // Окно поста ищем по строке действий, а не по фото: фото в нём может ещё грузиться
   const root = () =>
-    [...document.querySelectorAll('[role="dialog"]')].find((d) => mainMedia(d, postId())) ??
+    [...document.querySelectorAll('[role="dialog"]')].find((d) => actionRow(d)) ??
     document.querySelector('main') ??
     document.body;
   const row = actionRow(root());
@@ -444,6 +512,37 @@ function watchDom() {
   scan();
 }
 
+// ---- Фоновая вкладка для «Скачать оригинал» ----
+
+/** Проверка «данные готовы — отдаём», пока вкладка ждёт пост. */
+let harvest: (() => void) | undefined;
+
+/** Все фото поста в полном размере: столько, сколько обещает original_width. */
+function hasOriginals(post: MediaPost): boolean {
+  return post.items.every(
+    (item) =>
+      item.kind !== 'image' || !item.originalWidth || (item.width ?? 0) >= item.originalWidth,
+  );
+}
+
+function startHarvest(postId: string) {
+  let sent = false;
+  const send = () => {
+    const post = cache.get(postId);
+    if (sent || !post) return;
+    sent = true;
+    harvest = undefined;
+    void browser.runtime.sendMessage({ type: 'harvest-result', post });
+  };
+  harvest = () => {
+    const post = cache.get(postId);
+    if (post && hasOriginals(post)) send();
+  };
+  harvest();
+  // Если полного списка размеров так и не пришло, отдаём лучшее, что есть
+  setTimeout(send, 5000);
+}
+
 export default defineContentScript({
   matches: ['*://*.instagram.com/*'],
   // Слушаем перехватчик с самого начала: встроенный JSON он разбирает ещё до загрузки DOM
@@ -452,7 +551,13 @@ export default defineContentScript({
     window.addEventListener('message', (event) => {
       if (event.source !== window || !isPageMessage(event.data)) return;
       for (const post of event.data.posts) cache.add(post);
+      harvest?.();
     });
+
+    // Если background открыл эту вкладку ради оригинала, отдаём ему данные поста
+    void browser.runtime
+      .sendMessage({ type: 'harvest-check' })
+      .then((target: HarvestCheckResponse) => target && startHarvest(target.postId));
 
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', watchDom, { once: true });

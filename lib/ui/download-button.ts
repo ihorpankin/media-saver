@@ -25,7 +25,9 @@ const BASE_STYLE = `
     font: 600 13px/1 system-ui, -apple-system, "Segoe UI", sans-serif; }
   button:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; border-radius: 6px; }
   button:disabled { cursor: default; opacity: .6; }
-  .all[hidden] { display: none; }
+  .all[hidden], .original[hidden] { display: none; }
+  .original { font-size: 11px; letter-spacing: .02em; padding: 3px 6px;
+    border: 1.5px solid currentColor; border-radius: 6px; }
   svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 2;
     stroke-linecap: round; stroke-linejoin: round; }
   :host([state="done"]) .main { color: #16a34a; }
@@ -41,7 +43,7 @@ const INLINE_STYLE = `
   :host([layout="column"]) { flex-direction: column; gap: 4px; }
   .main { padding: 8px; }
   :host([layout="column"]) .main { padding: 0; }
-  .all:hover, .main:hover { opacity: .7; }
+  .all:hover, .main:hover, .original:hover { opacity: .7; }
 `;
 
 /** Кнопка поверх медиа: полупрозрачный кружок, появляется при наведении. */
@@ -56,7 +58,7 @@ const OVERLAY_STYLE = `
   button:hover { background: rgba(0, 0, 0, .75); }
   button:active { transform: scale(.94); }
   .main { width: 36px; }
-  .all { padding: 0 12px; }
+  .all, .original { padding: 0 12px; border: none; border-radius: 18px; font-size: 13px; }
   svg { width: 20px; height: 20px; stroke-width: 2.2; }
   :host([state="done"]) .main { color: #fff; background: rgba(22, 163, 74, .85); }
   :host([state="error"]) .main { color: #fff; background: rgba(220, 38, 38, .85); }
@@ -69,6 +71,11 @@ export interface DownloadButtonOptions {
   /** Кнопка «Все N». Показывается, только если `count()` больше 1. */
   all?: {
     count: () => number | undefined;
+    onClick: () => Promise<void>;
+  };
+  /** Кнопка «HD …» для оригинала. Показывается, только если `label()` что-то вернул. */
+  original?: {
+    label: () => { text: string; title: string } | undefined;
     onClick: () => Promise<void>;
   };
 }
@@ -89,15 +96,17 @@ export function setWaiting(host: HTMLElement, waiting: boolean) {
 
 function createControl(
   style: string,
-  { onClick, title = 'Скачать', all }: DownloadButtonOptions,
+  { onClick, title = 'Скачать', all, original }: DownloadButtonOptions,
 ): Control {
   const host = document.createElement('media-saver-button');
   const shadow = host.attachShadow({ mode: 'closed' });
   shadow.innerHTML = `<style>${BASE_STYLE}${style}</style>
     <button type="button" class="main"><svg viewBox="0 0 24 24"></svg></button>
-    <button type="button" class="all" hidden></button>`;
+    <button type="button" class="all" hidden></button>
+    <button type="button" class="original" hidden></button>`;
   const mainButton = shadow.querySelector<HTMLButtonElement>('.main')!;
   const allButton = shadow.querySelector<HTMLButtonElement>('.all')!;
+  const originalButton = shadow.querySelector<HTMLButtonElement>('.original')!;
   const svg = shadow.querySelector('svg')!;
 
   let resetTimer: ReturnType<typeof setTimeout> | undefined;
@@ -107,6 +116,7 @@ function createControl(
     mainButton.title = tooltip;
     mainButton.setAttribute('aria-label', tooltip);
     allButton.disabled = state === 'loading';
+    originalButton.disabled = state === 'loading';
   };
   setState('idle');
 
@@ -121,6 +131,11 @@ function createControl(
     allButton.hidden = count < 2;
     allButton.textContent = `Все ${count}`;
     allButton.title = `Скачать все ${count}`;
+
+    const hd = original?.label();
+    originalButton.hidden = !hd;
+    originalButton.textContent = hd?.text ?? '';
+    originalButton.title = hd?.title ?? '';
   };
 
   const run = async (task: () => Promise<void>) => {
@@ -143,6 +158,7 @@ function createControl(
   for (const [button, task] of [
     [mainButton, onClick],
     [allButton, all?.onClick],
+    [originalButton, original?.onClick],
   ] as const) {
     // Сайт не должен видеть нажатия на кнопки: иначе двойной клик ставит лайк, а нажатие листает карусель
     for (const type of ['pointerdown', 'mousedown', 'dblclick'] as const) {

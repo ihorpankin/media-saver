@@ -1,5 +1,5 @@
 import { PAGE_CHANNEL, type PagePostsMessage } from '@/lib/core/messages';
-import { installInterceptor, scanInlineData } from '@/lib/page/interceptor';
+import { installInterceptor, watchInlineData } from '@/lib/page/interceptor';
 import { instagramPageParser } from '@/lib/sites/instagram/parse';
 
 // Работает в контексте страницы (MAIN world) с самого начала загрузки, чтобы успеть
@@ -16,12 +16,7 @@ export default defineContentScript({
     };
 
     installInterceptor(instagramPageParser, emit);
-
-    const scan = () => scanInlineData(instagramPageParser, emit, '"image_versions2"');
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', scan, { once: true });
-    } else {
-      scan();
-    }
+    // Без кавычек: в данных, вложенных строкой, кавычки экранированы
+    watchInlineData(instagramPageParser, emit, 'image_versions2');
   },
 });
