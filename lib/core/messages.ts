@@ -83,7 +83,20 @@ export interface YoutubeProgressMessage {
   percent: number;
 }
 
+/**
+ * Файл, который скачала сама страница: CDN TikTok пускает к видео надёжно только с cookie
+ * и Referer сайта, а у chrome.downloads Referer нет. Байты — base64, background сохраняет.
+ */
+export interface BytesDownloadRequest {
+  type: 'download-bytes';
+  post: MediaPost;
+  index: number;
+  data: string;
+  mime: string;
+}
+
 export type BackgroundRequest =
+  | BytesDownloadRequest
   | YoutubeVideoRequest
   | DownloadRequest
   | OriginalRequest
@@ -121,7 +134,14 @@ export interface RevokeRequest {
   url: string;
 }
 
-export type OffscreenRequest = MuxRequest | RevokeRequest;
+/** Превратить скачанные страницей байты (base64) в blob-ссылку для chrome.downloads. */
+export interface BlobRequest {
+  type: 'offscreen-blob';
+  data: string;
+  mime: string;
+}
+
+export type OffscreenRequest = MuxRequest | RevokeRequest | BlobRequest;
 
 /** Ответ приходит, когда все файлы скачались или упали. */
 export interface DownloadResponse {

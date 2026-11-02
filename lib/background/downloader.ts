@@ -1,8 +1,15 @@
 import { buildFilename, DEFAULT_TEMPLATE } from '@/lib/core/filename';
 import { createLimiter } from '@/lib/core/limiter';
-import type { DownloadRequest, DownloadResponse } from '@/lib/core/messages';
+import type {
+  BlobRequest,
+  BytesDownloadRequest,
+  DownloadRequest,
+  DownloadResponse,
+  MuxResponse,
+  RevokeRequest,
+} from '@/lib/core/messages';
 import { loadSettings } from '@/lib/core/settings';
-import { resolveVideo } from './video';
+import { ensureOffscreen, resolveVideo } from './video';
 
 // Не больше трёх файлов одновременно: карусель из 20 слайдов не должна бить по CDN разом
 const run = createLimiter(3);
@@ -37,6 +44,33 @@ async function downloadOne(url: string, filename: string, saveAs = false): Promi
   await waitForDownload(id);
 }
 
+/** Сохраняет файл, который скачала страница (см. BytesDownloadRequest). */
+export async function handleBytesDownload(
+  request: BytesDownloadRequest,
+): Promise<DownloadResponse> {
+  const { post, index, data, mime } = request;
+  const item = post.items.find((i) => i.index === index);
+  if (!item) return { completed: 0, errors: [{ index, error: 'нет такого файла в посте' }] };
+  const settings = await loadSettings();
+  await ensureOffscreen();
+  const blobRequest: BlobRequest = { type: 'offscreen-blob', data, mime };
+  const response: MuxResponse = await browser.runtime.sendMessage(blobRequest);
+  if ('error' in response) return { completed: 0, errors: [{ index, error: response.error }] };
+  try {
+    await downloadOne(
+      response.url,
+      buildFilename(post, item, settings.template || DEFAULT_TEMPLATE),
+      settings.saveAs,
+    );
+    return { completed: 1, errors: [] };
+  } catch (error) {
+    return { completed: 0, errors: [{ index, error: String(error) }] };
+  } finally {
+    const revoke: RevokeRequest = { type: 'offscreen-revoke', url: response.url };
+    void browser.runtime.sendMessage(revoke).catch(() => {});
+  }
+}
+
 /** Скачивает выбранные файлы поста и сообщает, сколько получилось. */
 export async function handleDownload(request: DownloadRequest): Promise<DownloadResponse> {
   const { post, indexes } = request;
@@ -51,7 +85,9 @@ export async function handleDownload(request: DownloadRequest): Promise<Download
         const filename = buildFilename(post, item, settings.template || DEFAULT_TEMPLATE);
         if (item.kind !== 'video') return downloadOne(item.url, filename, saveAs);
         const source =
-          settings.videoQuality === 'compatible' ? { url: item.url } : await resolveVideo(item);
+          settings.videoQuality === 'compatible'
+            ? { url: item.compatibleUrl ?? item.url }
+            : await resolveVideo(item);
         try {
           await downloadOne(source.url, filename, saveAs);
         } finally {

@@ -1,5 +1,5 @@
 import { setupContextMenu } from '@/lib/background/context-menu';
-import { handleDownload } from '@/lib/background/downloader';
+import { handleBytesDownload, handleDownload } from '@/lib/background/downloader';
 import { handleOriginal, harvestResult, harvestTarget } from '@/lib/background/original';
 import { downloadThumbnail } from '@/lib/background/youtube';
 import { downloadWithYtdlp } from '@/lib/background/ytdlp';
@@ -20,6 +20,9 @@ export default defineBackground(() => {
 
   browser.runtime.onMessage.addListener((message: BackgroundRequest, sender, sendResponse) => {
     switch (message?.type) {
+      case 'download-bytes':
+        handleBytesDownload(message).then(sendResponse, (e: unknown) => sendResponse(failed(e)));
+        return true;
       case 'download':
         handleDownload(message).then(sendResponse, (e: unknown) => sendResponse(failed(e)));
         // Ответ асинхронный: держим канал открытым

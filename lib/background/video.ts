@@ -11,13 +11,14 @@ import type { MuxRequest, MuxResponse, RevokeRequest } from '@/lib/core/messages
 let offscreenReady: Promise<void> | undefined;
 
 /** Создаёт offscreen document один раз: Chrome разрешает только один на расширение. */
-function ensureOffscreen(): Promise<void> {
+export function ensureOffscreen(): Promise<void> {
   offscreenReady ??= (async () => {
     if (await browser.offscreen.hasDocument()) return;
     await browser.offscreen.createDocument({
       url: browser.runtime.getURL('/offscreen.html'),
       reasons: [browser.offscreen.Reason.BLOBS],
-      justification: 'Склейка видео- и аудиодорожек DASH в один файл перед скачиванием',
+      justification:
+        'Склейка дорожек DASH и сохранение файлов, скачанных страницей, перед скачиванием',
     });
   })().catch((error: unknown) => {
     offscreenReady = undefined;

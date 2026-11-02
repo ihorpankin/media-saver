@@ -24,6 +24,10 @@ export default defineConfig({
       // фото и видео X
       '*://pbs.twimg.com/*',
       '*://video.twimg.com/*',
+      // TikTok: сам сайт и видео (v16-webapp-prime.tiktok.com), картинки на tiktokcdn
+      '*://*.tiktok.com/*',
+      '*://*.tiktokcdn.com/*',
+      '*://*.tiktokcdn-us.com/*',
     ],
   },
   webExt: {

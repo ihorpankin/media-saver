@@ -4,7 +4,7 @@
  * имена файлов) работает только с ними.
  */
 
-export type SiteId = 'instagram' | 'youtube' | 'x';
+export type SiteId = 'instagram' | 'youtube' | 'x' | 'tiktok';
 
 export type MediaKind = 'image' | 'video';
 
@@ -26,6 +26,11 @@ export interface MediaItem {
    * Часто качество выше, чем у `url`, но видео и звук нужно склеивать.
    */
   dashManifest?: string;
+  /**
+   * Видео в H.264 для настройки «Совместимое качество», если лучшее в `url` — в другом кодеке
+   * (TikTok отдаёт 1080p в H.265).
+   */
+  compatibleUrl?: string;
   /** Длительность видео в секундах, если известна. */
   duration?: number;
   /** Размер оригинала, если сайт его сообщает. Нужен, чтобы предложить «Скачать оригинал». */

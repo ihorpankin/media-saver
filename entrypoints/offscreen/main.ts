@@ -26,6 +26,13 @@ browser.runtime.onMessage.addListener((message: OffscreenRequest, _sender, sendR
     case 'offscreen-mux':
       mux(message.videoUrl, message.audioUrl).then(sendResponse);
       return true;
+    case 'offscreen-blob': {
+      const bytes = Uint8Array.from(atob(message.data), (c) => c.charCodeAt(0));
+      sendResponse({
+        url: URL.createObjectURL(new Blob([bytes], { type: message.mime })),
+      } satisfies MuxResponse);
+      return;
+    }
     case 'offscreen-revoke':
       URL.revokeObjectURL(message.url);
       return;
