@@ -1,6 +1,7 @@
 import { buildFilename, DEFAULT_TEMPLATE } from '@/lib/core/filename';
 import { createLimiter } from '@/lib/core/limiter';
 import type { DownloadRequest, DownloadResponse } from '@/lib/core/messages';
+import { resolveVideo } from './video';
 
 // Не больше трёх файлов одновременно: карусель из 20 слайдов не должна бить по CDN разом
 const run = createLimiter(3);
@@ -44,7 +45,18 @@ export async function handleDownload(
   const items = indexes ? post.items.filter((i) => indexes.includes(i.index)) : post.items;
 
   const results = await Promise.allSettled(
-    items.map((item) => run(() => downloadOne(item.url, buildFilename(post, item, template)))),
+    items.map((item) =>
+      run(async () => {
+        const filename = buildFilename(post, item, template);
+        if (item.kind !== 'video') return downloadOne(item.url, filename);
+        const source = await resolveVideo(item);
+        try {
+          await downloadOne(source.url, filename);
+        } finally {
+          source.release?.();
+        }
+      }),
+    ),
   );
 
   const errors: DownloadResponse['errors'] = [];

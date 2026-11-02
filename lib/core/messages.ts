@@ -65,6 +65,25 @@ export interface HarvestResultRequest {
 export type BackgroundRequest =
   DownloadRequest | OriginalRequest | HarvestCheckRequest | HarvestResultRequest;
 
+// ---- Background → offscreen document (runtime.sendMessage) ----
+
+/** Скачать дорожки DASH и склеить в один mp4. Ответ — blob-ссылка на результат. */
+export interface MuxRequest {
+  type: 'offscreen-mux';
+  videoUrl: string;
+  audioUrl: string;
+}
+
+export type MuxResponse = { url: string } | { error: string };
+
+/** Освободить blob-ссылку после того, как файл скачался. */
+export interface RevokeRequest {
+  type: 'offscreen-revoke';
+  url: string;
+}
+
+export type OffscreenRequest = MuxRequest | RevokeRequest;
+
 /** Ответ приходит, когда все файлы скачались или упали. */
 export interface DownloadResponse {
   /** Сколько файлов скачано. */
