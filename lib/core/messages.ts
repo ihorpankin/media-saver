@@ -28,6 +28,13 @@ export function isPageMessage(data: unknown): data is PageMessage {
   );
 }
 
+/**
+ * LinkedIn: content script спрашивает у страницы источники видеоплеера событием на элементе
+ * плеера, страница отвечает JSON-массивом ссылок на mp4 в его атрибуте.
+ */
+export const LINKEDIN_SOURCES_EVENT = 'media-saver:linkedin-sources';
+export const LINKEDIN_SOURCES_ATTR = 'data-media-saver-sources';
+
 // ---- Content script → background (runtime.sendMessage) ----
 
 export interface DownloadRequest {

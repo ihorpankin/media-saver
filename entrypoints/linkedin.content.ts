@@ -1,15 +1,18 @@
 import type { MediaItem, MediaPost } from '@/lib/core/media';
-import type {
-  ContextDownloadRequest,
-  DownloadRequest,
-  DownloadResponse,
+import {
+  type ContextDownloadRequest,
+  type DownloadRequest,
+  type DownloadResponse,
+  LINKEDIN_SOURCES_ATTR,
+  LINKEDIN_SOURCES_EVENT,
 } from '@/lib/core/messages';
 import { createInlineButton, triggerDownload } from '@/lib/ui/download-button';
 
 // LinkedIn: кнопка ⬇ в строке действий поста (реакция, комментарий, репост, отправить).
-// Пока только фото. В новой ленте LinkedIn нет ни id постов, ни JSON с данными — всё
-// собирается из разметки: пост находим по кнопке реакции, картинки — по адресам media.licdn.com.
-// Видео (HLS на dms.licdn.com) — отдельная задача.
+// В новой ленте LinkedIn нет ни id постов, ни JSON с данными — всё собирается из разметки:
+// пост находим по кнопке реакции, картинки — по адресам media.licdn.com.
+// Видео — плеер video.js: среди его источников есть целые mp4 (H.264 + AAC, до 720p),
+// они качаются без cookie. Список источников достаёт linkedin-page.content.ts.
 
 // Только сама кнопка: у счётчика «36 reactions» в подписи тоже есть «reaction»
 const REACTION = 'button[aria-label^="Reaction button"]';
@@ -71,26 +74,49 @@ function authorOf(post: Element): string | undefined {
   return author?.getAttribute('href')?.match(/\/(?:in|company)\/([^/?#]+)/)?.[1];
 }
 
-async function downloadPhotos(post: Element) {
-  const urls = [...new Set(postImages(post).map(largestSrc))];
-  if (urls.length === 0)
-    throw new Error('в посте нет фото (видео из LinkedIn пока не поддерживаются)');
-  const items: MediaItem[] = urls.map((url, i) => ({
-    kind: 'image',
-    mediaId: imageId(url),
-    index: i + 1,
-    url,
-    ext: 'jpg',
-  }));
+/** Видеоплеер поста (video.js). */
+function playerOf(post: Element): HTMLElement | null {
+  return post.querySelector<HTMLElement>('.video-js');
+}
+
+/**
+ * Лучший mp4 ролика. Список вариантов есть только у объекта плеера в JS страницы, поэтому
+ * спрашиваем linkedin-page.content.ts: событие доходит до него синхронно, и ответ уже лежит
+ * в атрибуте плеера, когда dispatchEvent вернулся.
+ */
+function bestMp4(player: HTMLElement): string | undefined {
+  player.dispatchEvent(new CustomEvent(LINKEDIN_SOURCES_EVENT, { bubbles: true }));
+  const sources: string[] = JSON.parse(player.getAttribute(LINKEDIN_SOURCES_ATTR) ?? '[]');
+  const height = (url: string) => Number(url.match(/\/mp4-(\d+)p/)?.[1] ?? 0);
+  return sources.sort((a, b) => height(b) - height(a))[0];
+}
+
+async function downloadPost(post: Element) {
+  const author = authorOf(post);
+  const player = playerOf(post);
+  let postId: string;
+  let items: MediaItem[];
+  if (player) {
+    const url = bestMp4(player);
+    if (!url) throw new Error('у видео нет mp4 (плеер ещё не загрузился?)');
+    // id ролика — тот же, что у обложки: …/playlist/vid/v2/<id>/mp4-720p-…
+    postId = url.match(/\/playlist\/vid\/v2\/([^/]+)\//)?.[1] ?? 'video';
+    items = [{ kind: 'video', mediaId: postId, index: 1, url, ext: 'mp4' }];
+  } else {
+    const urls = [...new Set(postImages(post).map(largestSrc))];
+    if (urls.length === 0) throw new Error('в посте нет ни фото, ни видео');
+    postId = imageId(urls[0]!);
+    items = urls.map((url, i) => ({
+      kind: 'image',
+      mediaId: imageId(url),
+      index: i + 1,
+      url,
+      ext: 'jpg',
+    }));
+  }
   const request: DownloadRequest = {
     type: 'download',
-    post: {
-      site: 'linkedin',
-      postId: imageId(urls[0]!),
-      author: authorOf(post),
-      items,
-      itemCount: items.length,
-    } satisfies MediaPost,
+    post: { site: 'linkedin', postId, author, items, itemCount: items.length } satisfies MediaPost,
   };
   const response: DownloadResponse = await browser.runtime.sendMessage(request);
   if (response.errors.length > 0) {
@@ -102,7 +128,9 @@ function scan() {
   for (const reaction of document.querySelectorAll(REACTION)) {
     const post = postOf(reaction);
     const row = actionRowOf(reaction);
-    if (!row || row.querySelector('media-saver-button') || postImages(post).length === 0) continue;
+    if (!row || row.querySelector('media-saver-button')) continue;
+    const video = playerOf(post) !== null;
+    if (!video && postImages(post).length === 0) continue;
 
     // Ставим после кнопок действий: перед первым элементом-обёрткой после реакции
     // (дальше в строке идут счётчики реакций)
@@ -115,8 +143,8 @@ function scan() {
     wrapper.style.alignItems = 'center';
     wrapper.append(
       createInlineButton('row', {
-        title: 'Скачать фото поста',
-        onClick: () => downloadPhotos(post),
+        title: video ? 'Скачать видео поста' : 'Скачать фото поста',
+        onClick: () => downloadPost(post),
       }),
     );
     row.insertBefore(wrapper, before);
