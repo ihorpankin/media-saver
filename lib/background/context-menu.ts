@@ -21,7 +21,8 @@ import { downloadThumbnail } from './youtube';
  */
 
 const ROOT = 'media-saver';
-const PAGES = ['*://*.instagram.com/*'];
+// Сайты, где работает подменю «Media Saver ▸ Скачать…»: у их content script есть обработчик
+const PAGES = ['*://*.instagram.com/*', '*://x.com/*', '*://twitter.com/*'];
 
 const DOWNLOADS: Array<[id: string, mode: DownloadMode, title: string]> = [
   ['download-slide', 'slide', 'Скачать'],

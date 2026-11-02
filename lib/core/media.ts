@@ -4,7 +4,7 @@
  * имена файлов) работает только с ними.
  */
 
-export type SiteId = 'instagram' | 'youtube';
+export type SiteId = 'instagram' | 'youtube' | 'x';
 
 export type MediaKind = 'image' | 'video';
 

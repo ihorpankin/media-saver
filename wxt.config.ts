@@ -19,6 +19,11 @@ export default defineConfig({
       '*://www.youtube.com/*',
       // превью роликов YouTube
       '*://i.ytimg.com/*',
+      '*://x.com/*',
+      '*://twitter.com/*',
+      // фото и видео X
+      '*://pbs.twimg.com/*',
+      '*://video.twimg.com/*',
     ],
   },
   webExt: {
