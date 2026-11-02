@@ -30,6 +30,11 @@ describe('buildFilename', () => {
     expect(buildFilename(p, p.items[0]!)).toBe('instagram/patrick.ganas/DfM_W2rE0Dp.jpg');
   });
 
+  it('один слайд из карусели: номер остаётся', () => {
+    const p = post(0, { items: [item(4)], itemCount: 6 });
+    expect(buildFilename(p, p.items[0]!)).toBe('instagram/patrick.ganas/DfM_W2rE0Dp_4.jpg');
+  });
+
   it('неизвестный автор', () => {
     const p = post(1, { author: undefined });
     expect(buildFilename(p, item(1, 'mp4'))).toBe('instagram/unknown/DfM_W2rE0Dp.mp4');

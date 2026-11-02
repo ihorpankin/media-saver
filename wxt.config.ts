@@ -8,9 +8,8 @@ export default defineConfig({
     host_permissions: ['*://*.instagram.com/*', '*://*.cdninstagram.com/*', '*://*.fbcdn.net/*'],
   },
   webExt: {
-    // Отдельный профиль Chrome для разработки; вход в Instagram в нём сохраняется между запусками
-    chromiumProfile: '.chrome-profile',
-    keepProfileChanges: true,
-    startUrls: ['https://www.instagram.com/'],
+    // Автозапуск Chrome через web-ext на Windows падает (CDP Extensions.loadUnpacked),
+    // поэтому расширение подключается вручную в обычный Chrome — см. README
+    disabled: true,
   },
 });

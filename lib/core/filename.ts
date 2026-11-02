@@ -46,7 +46,7 @@ export function buildFilename(
     postId: post.postId,
     mediaId: item.mediaId,
     // У одиночного поста номер не нужен: `DfM_W2rE0Dp.jpg`, а не `DfM_W2rE0Dp_1.jpg`
-    index: post.items.length > 1 ? String(item.index) : '',
+    index: (post.itemCount ?? post.items.length) > 1 ? String(item.index) : '',
     date: formatDate(post.takenAt),
   };
 
