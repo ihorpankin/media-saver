@@ -46,6 +46,14 @@ const INLINE_STYLE = `
   .main { padding: 8px; }
   :host([layout="column"]) .main { padding: 0; }
   .all:hover, .main:hover, .original:hover { opacity: .7; }
+  /* Колонка Shorts: иконка в кружке, подпись под ней. Цвета задаёт вызывающий по соседней кнопке */
+  :host([layout="circle"]) { flex-direction: column; }
+  :host([layout="circle"]) .main { flex-direction: column; gap: 6px; padding: 0;
+    font: 400 12px/18px Roboto, Arial, sans-serif; }
+  :host([layout="circle"]) svg { box-sizing: content-box; padding: 12px; border-radius: 50%;
+    background: var(--media-saver-circle, rgba(127, 127, 127, .2)); }
+  :host([layout="circle"]) .main:hover { opacity: 1; }
+  :host([layout="circle"]) .main:hover svg { filter: brightness(1.4); }
 `;
 
 /** Кнопка поверх медиа: полупрозрачный кружок, появляется при наведении. */
@@ -223,7 +231,7 @@ function createControl(
  * Цвет наследуется от панели, поэтому кнопка выглядит как родная и в светлой, и в тёмной теме.
  */
 export function createInlineButton(
-  layout: 'row' | 'column',
+  layout: 'row' | 'column' | 'circle',
   options: DownloadButtonOptions,
 ): HTMLElement {
   const { host, refresh } = createControl(INLINE_STYLE, options);

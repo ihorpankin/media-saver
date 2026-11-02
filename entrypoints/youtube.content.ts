@@ -24,9 +24,15 @@ function currentVideoId(): string {
 }
 
 async function downloadThumbnail() {
-  const author =
-    document.querySelector('ytd-watch-metadata ytd-channel-name a')?.textContent?.trim() ||
-    undefined;
+  // Папка — адрес канала (@handle), как у видео из yt-dlp: под роликом на его странице,
+  // в Shorts — ссылка «@канал/shorts» поверх видео. Кириллические адреса приходят закодированными
+  const handle = document
+    .querySelector(
+      'ytd-watch-metadata ytd-channel-name a[href^="/@"], yt-reel-player-overlay-view-model a[href^="/@"]',
+    )
+    ?.getAttribute('href')
+    ?.match(/^\/(@[^/?]+)/)?.[1];
+  const author = handle ? decodeURIComponent(handle) : undefined;
   const request: YoutubeThumbnailRequest = {
     type: 'youtube-thumbnail',
     videoId: currentVideoId(),
@@ -60,20 +66,54 @@ function pill(child: HTMLElement): HTMLElement {
   return wrapper;
 }
 
-function scan() {
-  const row = document.querySelector(ROW);
-  if (!row || row.querySelector('media-saver-button')) return;
-  const video: HTMLElement = createInlineButton('row', {
+function createButtons(layout: 'row' | 'circle') {
+  const video: HTMLElement = createInlineButton(layout, {
     title: 'Скачать видео через yt-dlp',
     label: 'Видео',
     onClick: () => downloadVideo(video),
   });
-  const thumbnail = createInlineButton('row', {
+  const thumbnail = createInlineButton(layout, {
     title: 'Скачать превью в максимальном разрешении',
     label: 'Превью',
     onClick: downloadThumbnail,
   });
-  row.append(pill(video), pill(thumbnail));
+  return [video, thumbnail];
+}
+
+/** Страница ролика: «таблетки» в строке под видео. */
+function scanWatch() {
+  const row = document.querySelector(ROW);
+  if (!row || row.querySelector('media-saver-button')) return;
+  row.append(...createButtons('row').map(pill));
+}
+
+/**
+ * Shorts: колонка справа «лайк, комментарии, поделиться, ремикс, звук». Ставим кнопки перед
+ * «звуком» и берём цвета у соседней кнопки, чтобы попасть и в светлую, и в тёмную тему.
+ */
+function scanShorts() {
+  if (!location.pathname.startsWith('/shorts/')) return;
+  const bar = document.querySelector('reel-action-bar-view-model');
+  if (!bar || bar.querySelector('media-saver-button')) return;
+  const native = bar.querySelector('button');
+  const style = native && getComputedStyle(native);
+  for (const host of createButtons('circle')) {
+    if (style) {
+      host.style.color = style.color;
+      host.style.setProperty('--media-saver-circle', style.backgroundColor);
+    }
+    const wrapper = document.createElement('div');
+    wrapper.style.cssText = 'display:flex;justify-content:center;margin-top:16px';
+    wrapper.append(host);
+    const sound =
+      bar.lastElementChild?.tagName === 'PIVOT-BUTTON-VIEW-MODEL' ? bar.lastElementChild : null;
+    bar.insertBefore(wrapper, sound);
+  }
+}
+
+function scan() {
+  scanWatch();
+  scanShorts();
 }
 
 export default defineContentScript({

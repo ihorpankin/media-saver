@@ -34,7 +34,15 @@ const config = loadConfig();
 const YTDLP = config.ytdlp || 'yt-dlp';
 const FFMPEG = config.ffmpeg || 'ffmpeg';
 
-const OUTPUT = join(homedir(), 'Downloads', 'youtube', '%(channel)s', '%(title)s [%(id)s].%(ext)s');
+// Папка — адрес канала (@handle): он уникален и не меняется при переименовании канала.
+// Так же называет папку расширение для превью (entrypoints/youtube.content.ts)
+const OUTPUT = join(
+  homedir(),
+  'Downloads',
+  'youtube',
+  '%(uploader_id,channel)s',
+  '%(title)s [%(id)s].%(ext)s',
+);
 
 // Форматы: лучшее видео + лучший звук, или H.264 + AAC до 1080p, которые откроет любой плеер
 const FORMATS = {
