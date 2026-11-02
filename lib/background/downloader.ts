@@ -1,6 +1,7 @@
 import { buildFilename, DEFAULT_TEMPLATE } from '@/lib/core/filename';
 import { createLimiter } from '@/lib/core/limiter';
 import type { DownloadRequest, DownloadResponse } from '@/lib/core/messages';
+import { loadSettings } from '@/lib/core/settings';
 import { resolveVideo } from './video';
 
 // Не больше трёх файлов одновременно: карусель из 20 слайдов не должна бить по CDN разом
@@ -26,32 +27,33 @@ function waitForDownload(id: number): Promise<void> {
   });
 }
 
-async function downloadOne(url: string, filename: string): Promise<void> {
+async function downloadOne(url: string, filename: string, saveAs = false): Promise<void> {
   const id = await browser.downloads.download({
     url,
     filename,
     conflictAction: 'uniquify',
-    saveAs: false,
+    saveAs,
   });
   await waitForDownload(id);
 }
 
 /** Скачивает выбранные файлы поста и сообщает, сколько получилось. */
-export async function handleDownload(
-  request: DownloadRequest,
-  template: string = DEFAULT_TEMPLATE,
-): Promise<DownloadResponse> {
+export async function handleDownload(request: DownloadRequest): Promise<DownloadResponse> {
   const { post, indexes } = request;
   const items = indexes ? post.items.filter((i) => indexes.includes(i.index)) : post.items;
+  const settings = await loadSettings();
+  // «Сохранить как…» только для одного файла: на «Все N» было бы N окон подряд
+  const saveAs = settings.saveAs && items.length === 1;
 
   const results = await Promise.allSettled(
     items.map((item) =>
       run(async () => {
-        const filename = buildFilename(post, item, template);
-        if (item.kind !== 'video') return downloadOne(item.url, filename);
-        const source = await resolveVideo(item);
+        const filename = buildFilename(post, item, settings.template || DEFAULT_TEMPLATE);
+        if (item.kind !== 'video') return downloadOne(item.url, filename, saveAs);
+        const source =
+          settings.videoQuality === 'compatible' ? { url: item.url } : await resolveVideo(item);
         try {
-          await downloadOne(source.url, filename);
+          await downloadOne(source.url, filename, saveAs);
         } finally {
           source.release?.();
         }

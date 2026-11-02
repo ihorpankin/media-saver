@@ -94,6 +94,22 @@ export function setWaiting(host: HTMLElement, waiting: boolean) {
   waitingSetters.get(host)?.(waiting);
 }
 
+/** Какое действие кнопки запустить извне. */
+export type ButtonAction = 'slide' | 'all' | 'original';
+
+/** Действия кнопок для запуска извне — из контекстного меню. */
+const actions = new WeakMap<HTMLElement, (action: ButtonAction) => void>();
+
+/**
+ * Нажать кнопку программно: со спиннером, галочкой и текстом ошибки, как при клике.
+ * У плиток сеток одно действие — весь пост, им же отвечаем на любое.
+ */
+export function triggerDownload(host: HTMLElement, action: ButtonAction = 'slide'): boolean {
+  const trigger = actions.get(host);
+  trigger?.(action);
+  return Boolean(trigger);
+}
+
 function createControl(
   style: string,
   { onClick, title = 'Скачать', all, original }: DownloadButtonOptions,
@@ -154,6 +170,14 @@ function createControl(
       resetTimer = setTimeout(() => setState('idle'), 5000);
     }
   };
+  actions.set(host, (action) => {
+    if (action === 'all' && all) void run(all.onClick);
+    else if (action === 'original') {
+      void run(
+        original?.onClick ?? (() => Promise.reject(new Error('здесь нет оригинала крупнее'))),
+      );
+    } else void run(onClick);
+  });
 
   for (const [button, task] of [
     [mainButton, onClick],

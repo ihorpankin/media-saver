@@ -65,6 +65,19 @@ export interface HarvestResultRequest {
 export type BackgroundRequest =
   DownloadRequest | OriginalRequest | HarvestCheckRequest | HarvestResultRequest;
 
+// ---- Background → content script (tabs.sendMessage) ----
+
+export type DownloadMode = 'slide' | 'all' | 'original';
+
+/** Пункт «Скачать» в контекстном меню: скачать медиа, на котором кликнули правой кнопкой. */
+export interface ContextDownloadRequest {
+  type: 'context-download';
+  /** Что скачать: текущий слайд, весь пост или оригинал текущего фото. */
+  mode: DownloadMode;
+  /** Адрес медиа из меню. У видео это blob-ссылка — по ней не скачать, нужен пост. */
+  srcUrl?: string;
+}
+
 // ---- Background → offscreen document (runtime.sendMessage) ----
 
 /** Скачать дорожки DASH и склеить в один mp4. Ответ — blob-ссылка на результат. */

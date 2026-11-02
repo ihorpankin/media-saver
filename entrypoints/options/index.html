@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Media Saver — настройки</title>
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <main>
+      <h1>Media Saver</h1>
+
+      <section>
+        <h2>Куда сохранять</h2>
+        <label for="template">Шаблон пути внутри папки «Загрузки»</label>
+        <input id="template" type="text" spellcheck="false" autocomplete="off" />
+        <p class="hint">
+          Подстановки: <code>{site}</code> <code>{author}</code> <code>{postId}</code>
+          <code>{mediaId}</code> <code>{index}</code> <code>{date}</code>. <code>/</code> — папка.
+          Расширение файла добавится само.
+        </p>
+        <p class="preview">
+          Например: <span id="preview-carousel"></span><br />
+          и для одиночного поста: <span id="preview-single"></span>
+        </p>
+        <button id="reset-template" type="button" class="link">Вернуть по умолчанию</button>
+
+        <label class="check">
+          <input id="save-as" type="checkbox" />
+          Спрашивать, куда сохранить (только при скачивании одного файла)
+        </label>
+      </section>
+
+      <section>
+        <h2>Качество видео</h2>
+        <label class="check">
+          <input type="radio" name="video-quality" value="best" />
+          <span>
+            <strong>Лучшее</strong> — до 1080p и выше. Instagram отдаёт такое видео в кодеке VP9:
+            Chrome, VLC и современные плееры его открывают, старые — нет.
+          </span>
+        </label>
+        <label class="check">
+          <input type="radio" name="video-quality" value="compatible" />
+          <span>
+            <strong>Совместимое</strong> — обычный mp4 до 720p в H.264. Откроется где угодно,
+            скачивается быстрее.
+          </span>
+        </label>
+      </section>
+
+      <p id="status" class="status" role="status"></p>
+    </main>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>

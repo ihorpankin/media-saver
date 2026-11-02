@@ -1,3 +1,4 @@
+import { setupContextMenu } from '@/lib/background/context-menu';
 import { handleDownload } from '@/lib/background/downloader';
 import { handleOriginal, harvestResult, harvestTarget } from '@/lib/background/original';
 import type { BackgroundRequest, DownloadResponse } from '@/lib/core/messages';
@@ -8,6 +9,8 @@ const failed = (error: unknown): DownloadResponse => ({
 });
 
 export default defineBackground(() => {
+  setupContextMenu();
+
   browser.runtime.onMessage.addListener((message: BackgroundRequest, sender, sendResponse) => {
     switch (message?.type) {
       case 'download':

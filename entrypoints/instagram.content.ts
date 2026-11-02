@@ -2,6 +2,7 @@ import { createPostCache } from '@/lib/content/post-cache';
 import { hasLargerOriginal, type MediaPost } from '@/lib/core/media';
 import {
   isPageMessage,
+  type ContextDownloadRequest,
   type DownloadRequest,
   type DownloadResponse,
   type HarvestCheckResponse,
@@ -11,6 +12,7 @@ import {
   attachOverlayButton,
   createInlineButton,
   setWaiting,
+  triggerDownload,
   type DownloadButtonOptions,
 } from '@/lib/ui/download-button';
 
@@ -588,6 +590,59 @@ function watchDom() {
   scan();
 }
 
+// ---- Контекстное меню «Скачать» ----
+
+/** Фото или видео под курсором, когда последний раз открывали контекстное меню. */
+let contextTarget: Element | undefined;
+
+/** Медиа под точкой: сквозь прозрачные слои Instagram, которые лежат поверх фото. */
+function mediaAtPoint(x: number, y: number): Element | undefined {
+  return document
+    .elementsFromPoint(x, y)
+    .find(
+      (el) =>
+        (el instanceof HTMLImageElement || el instanceof HTMLVideoElement) && isLargeMedia(el),
+    );
+}
+
+/**
+ * Пункт меню делает то же, что ⬇ этого поста: ищем ближайшую нашу кнопку вверх по дереву
+ * от медиа. Так меню само понимает слайд карусели, Reels, сторис и плитки сеток.
+ * Если кнопки нет, а это картинка — ищем пост по имени файла или скачиваем её как есть.
+ */
+async function contextDownload(request: ContextDownloadRequest) {
+  if (!contextTarget) throw new Error('под курсором нет фото или видео');
+  for (
+    let el: Element | undefined = contextTarget;
+    el && el !== document.body;
+    el = el.parentElement ?? undefined
+  ) {
+    const host = [...el.querySelectorAll<HTMLElement>('media-saver-button')].find(
+      (h) => h.isConnected,
+    );
+    if (host && triggerDownload(host, request.mode)) return;
+  }
+
+  const media = contextTarget instanceof HTMLImageElement ? contextTarget : undefined;
+  const post = media && postByImage(media);
+  const name = request.srcUrl && cdnFileName(request.srcUrl);
+  const item = post?.items.find((i) => cdnFileName(i.url) === name);
+  if (post && item) {
+    await send({ type: 'download', post, indexes: [item.index] });
+  } else if (request.srcUrl?.startsWith('http')) {
+    await send({
+      type: 'download',
+      post: {
+        site: 'instagram',
+        postId: name?.replace(/\.\w+$/, '') ?? 'image',
+        items: [{ kind: 'image', mediaId: 'image', index: 1, url: request.srcUrl, ext: 'jpg' }],
+      },
+    });
+  } else {
+    throw new Error('не нашёл, что скачать');
+  }
+}
+
 // ---- Фоновая вкладка для «Скачать оригинал» ----
 
 /** Проверка «данные готовы — отдаём», пока вкладка ждёт пост. */
@@ -624,6 +679,22 @@ export default defineContentScript({
   // Слушаем перехватчик с самого начала: встроенный JSON он разбирает ещё до загрузки DOM
   runAt: 'document_start',
   main() {
+    // Instagram накрывает медиа прозрачным слоем, поэтому запоминаем фото или видео
+    // под курсором, а не цель клика: от него дойдём до кнопки поста
+    document.addEventListener(
+      'contextmenu',
+      (event) => {
+        contextTarget = mediaAtPoint(event.clientX, event.clientY);
+      },
+      true,
+    );
+    browser.runtime.onMessage.addListener((message: ContextDownloadRequest) => {
+      if (message?.type !== 'context-download') return;
+      contextDownload(message).catch((error: unknown) =>
+        console.warn('[media-saver] скачивание из меню не удалось:', error),
+      );
+    });
+
     window.addEventListener('message', (event) => {
       if (event.source !== window || !isPageMessage(event.data)) return;
       for (const post of event.data.posts) cache.add(post);
