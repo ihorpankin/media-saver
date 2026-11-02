@@ -197,11 +197,18 @@ interface PostSource {
   postId: () => string | undefined;
   /** Элемент, внутри которого медиа поста (article, окно поста, вьюер сторис). */
   root: () => Element;
+  /** Последний способ найти пост, если не помогли ни id, ни картинка (видео в хайлайтах). */
+  fallback?: (slide: Slide) => MediaPost | undefined;
 }
 
 function resolvePost(source: PostSource, slide: Slide | undefined): MediaPost | undefined {
   const id = source.postId();
-  return (id && cache.get(id)) || (slide && postByImage(slide.media));
+  return (
+    (id && cache.get(id)) ||
+    (slide && postByImage(slide.media)) ||
+    (slide && source.fallback?.(slide)) ||
+    undefined
+  );
 }
 
 async function downloadSlide(source: PostSource) {
@@ -418,6 +425,75 @@ function storyPk(): string | undefined {
   return location.pathname.match(/^\/stories\/(?!highlights\/)[^/]+\/(\d+)/)?.[1];
 }
 
+/**
+ * Номер текущей истории по полоскам прогресса над ней. Полоски — ряд одинаковых сегментов,
+ * по одному на историю; у текущего заливка сдвинута через translateX (она «едет»).
+ */
+function storyProgressIndex(media: HTMLElement): number | undefined {
+  const area = media.getBoundingClientRect();
+  const moving = [...document.querySelectorAll<HTMLElement>('div[style*="translateX"]')].find(
+    (el) => {
+      const r = el.getBoundingClientRect();
+      return (
+        r.height >= 1 &&
+        r.height <= 4 &&
+        r.top >= area.top - 30 &&
+        r.top <= area.top + 40 &&
+        r.left >= area.left - 5 &&
+        r.right <= area.right + 5
+      );
+    },
+  );
+  // Сегмент — предок заливки, у родителя которого несколько детей одной ширины
+  for (let segment = moving; segment?.parentElement; segment = segment.parentElement) {
+    const siblings = [...segment.parentElement.children];
+    const width = segment.getBoundingClientRect().width;
+    if (
+      siblings.length >= 2 &&
+      siblings.every((s) => Math.abs(s.getBoundingClientRect().width - width) < 2)
+    ) {
+      return siblings.indexOf(segment) + 1;
+    }
+  }
+  return undefined;
+}
+
+/**
+ * История по её месту в ленте: для видео в хайлайтах, где в адресе нет id истории, а по
+ * картинке видео не найти. Длительность ролика сверяем с данными, чтобы не ошибиться номером.
+ */
+function storyByPosition(slide: Slide): MediaPost | undefined {
+  const index = storyProgressIndex(slide.media);
+  if (!index) return undefined;
+  const path = location.pathname;
+  const highlight = path.match(/^\/stories\/highlights\/(\d+)/)?.[1];
+  const user = highlight ? undefined : path.match(/^\/stories\/([^/]+)/)?.[1];
+  const post = cache.find(
+    (p) =>
+      p.reel?.index === index &&
+      (highlight
+        ? p.reel.id === `highlight:${highlight}`
+        : p.author === user && Boolean(p.permalink?.includes('/stories/'))),
+  );
+  const item = post?.items[0];
+  if (!item) return undefined;
+  if (slide.media instanceof HTMLVideoElement) {
+    const duration = slide.media.duration;
+    if (item.kind !== 'video') return undefined;
+    if (item.duration && Number.isFinite(duration) && Math.abs(item.duration - duration) > 1.5) {
+      return undefined;
+    }
+  }
+  return post;
+}
+
+/** pk текущей истории, а если его нет — номер по полоскам прогресса. */
+const storySource = (root: Element): PostSource => ({
+  postId: storyPk,
+  root: () => root,
+  fallback: storyByPosition,
+});
+
 /** Кнопка в шапке сторис, чтобы обновлять её состояние «ждём загрузку». */
 let storyButton: HTMLElement | undefined;
 
@@ -427,7 +503,7 @@ let storyButton: HTMLElement | undefined;
  */
 function storyReady(root: Element): boolean {
   const slide = visibleSlide(root);
-  return Boolean(slide && resolvePost({ postId: storyPk, root: () => root }, slide));
+  return Boolean(slide && resolvePost(storySource(root), slide));
 }
 
 /** Сторис: в шапке над историей «автор · время … пауза, меню». Ставим ⬇ перед паузой. */
@@ -459,8 +535,8 @@ function scanStories() {
     const root = el;
     if (!hasOurButton(row)) {
       const first = [...row.children].find((child) => child.contains(header[0]!))!;
-      // Если pk в адресе нет, пост ищется по картинке (см. resolvePost)
-      storyButton = createInlineButton('row', buttonOptions({ postId: storyPk, root: () => root }));
+      // Если pk в адресе нет (хайлайты, первая история), пост ищется по картинке или по номеру
+      storyButton = createInlineButton('row', buttonOptions(storySource(root)));
       insertButton(row, first, first, storyButton);
     }
     if (storyButton) setWaiting(storyButton, !storyReady(root));

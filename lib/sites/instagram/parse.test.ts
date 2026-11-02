@@ -167,6 +167,29 @@ describe('parseInstagram', () => {
     expect(parseInstagram(inline).map((p) => p.postId)).toEqual(['4021364098265521376']);
   });
 
+  it('хайлайт: номер истории в ленте', () => {
+    const highlight = {
+      data: {
+        xdt_api__v1__feed__reels_media__connection: {
+          edges: [
+            {
+              node: {
+                id: 'highlight:17988571238264085',
+                items: [story, { ...reel, id: '3119201495451108632_1', video_duration: 5 }],
+              },
+            },
+          ],
+        },
+      },
+    };
+    const posts = parseInstagram(highlight);
+    expect(posts.map((p) => p.reel)).toEqual([
+      { id: 'highlight:17988571238264085', index: 1 },
+      { id: 'highlight:17988571238264085', index: 2 },
+    ]);
+    expect(posts[1]!.items[0]!.duration).toBe(5);
+  });
+
   it('JSON без медиа', () => {
     expect(parseInstagram({ data: { viewer: { id: '1' } } })).toEqual([]);
     expect(parseInstagram(null)).toEqual([]);

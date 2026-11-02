@@ -28,6 +28,7 @@ interface IgMedia {
   image_versions2?: { candidates?: IgCandidate[] };
   video_versions?: IgCandidate[] | null;
   video_dash_manifest?: string | null;
+  video_duration?: number | null;
   carousel_media?: IgMedia[] | null;
 }
 
@@ -108,6 +109,7 @@ function toItem(media: IgMedia, index: number): MediaItem | undefined {
       ext: 'mp4',
       width: video.width,
       height: video.height,
+      duration: media.video_duration ?? undefined,
       dashManifest: media.video_dash_manifest ?? undefined,
     };
   }
@@ -158,7 +160,7 @@ function toPost(media: IgMedia): MediaPost {
 /** Находит все посты в любом JSON Instagram. */
 export function parseInstagram(json: unknown): MediaPost[] {
   const posts: MediaPost[] = [];
-  const walk = (node: unknown) => {
+  const walk = (node: unknown, reel?: MediaPost['reel']) => {
     // Встроенные данные иногда хранят целый ответ API строкой (`__bbox.result.response`
     // у Explore) — раскрываем такие строки, если в них есть медиа
     if (typeof node === 'string') {
@@ -173,16 +175,30 @@ export function parseInstagram(json: unknown): MediaPost[] {
     }
     if (typeof node !== 'object' || node === null) return;
     if (Array.isArray(node)) {
-      node.forEach(walk);
+      node.forEach((child) => walk(child));
       return;
     }
     if (isMedia(node)) {
       // Слайды карусели разбираются внутри toPost, отдельными постами их не считаем
       const post = toPost(node);
+      if (reel) post.reel = reel;
       if (post.items.length > 0) posts.push(post);
       return;
     }
-    Object.values(node).forEach(walk);
+    // Лента историй: `{ id: "highlight:…" или pk автора, items: [история, …] }`.
+    // Запоминаем порядок: в адресе хайлайта нет id текущей истории, только её номер на экране
+    const { id, items } = node as { id?: unknown; items?: unknown };
+    for (const [key, value] of Object.entries(node)) {
+      if (
+        key === 'items' &&
+        Array.isArray(items) &&
+        (typeof id === 'string' || typeof id === 'number')
+      ) {
+        items.forEach((item, i) => walk(item, { id: String(id), index: i + 1 }));
+      } else {
+        walk(value);
+      }
+    }
   };
   walk(json);
   return posts;
