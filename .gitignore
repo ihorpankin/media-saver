@@ -1,0 +1,6 @@
+node_modules/
+.output/
+.wxt/
+.chrome-profile/
+*.log
+.DS_Store
