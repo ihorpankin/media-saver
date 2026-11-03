@@ -80,10 +80,6 @@ Builds both extensions into the permanent folders `release/media-saver` and `rel
 
 Icons are rendered from `icons/` (`icon.png` for Media Saver, `icon-youtube.png` for YouTube) with `npm run icons`.
 
-## Publishing to the Chrome Web Store
-
-`npm run zip:store` builds a Media Saver archive without the `key` field. The listing texts, permission justifications and the steps are in [docs/store.md](docs/store.md), the privacy policy is [docs/privacy.md](docs/privacy.md).
-
 ## License
 
 [MIT](LICENSE)
