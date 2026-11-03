@@ -78,7 +78,7 @@ npm run pack
 
 Собирает оба расширения в постоянные папки `release/media-saver` и `release/media-saver-youtube`. Один раз: удалить dev-версии в `chrome://extensions` (у них тот же id), включить «Режим разработчика», «Загрузить распакованное расширение» → эти папки. Дальше после каждого `npm run pack` достаточно нажать ⟳ у расширения. Перед обновлением стоит пройтись по [чек-листу](docs/checklist.md).
 
-Иконки рисуются из `icons/*.svg` командой `npm run icons`.
+Иконки рисуются из `icons/` (`icon.png` для Media Saver, `icon-youtube.png` для YouTube) командой `npm run icons`.
 
 ## Публикация в Chrome Web Store
 
