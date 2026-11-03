@@ -1,8 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { SiteExtractor } from './extractor';
 import { hasLargerOriginal, type MediaItem } from './media';
 import { isPageMessage, PAGE_CHANNEL } from './messages';
-import { createRegistry } from './registry';
 
 const image = (extra: Partial<MediaItem> = {}): MediaItem => ({
   kind: 'image',
@@ -27,23 +25,6 @@ describe('hasLargerOriginal', () => {
     expect(hasLargerOriginal(image({ kind: 'video', width: 720, originalWidth: 1440 }))).toBe(
       false,
     );
-  });
-});
-
-describe('createRegistry', () => {
-  const fake = (host: string): SiteExtractor => ({
-    site: 'instagram',
-    matches: (url) => url.hostname.endsWith(host),
-    page: { shouldParse: () => false, parse: () => [] },
-    findTargets: () => [],
-    resolve: async () => null,
-  });
-
-  it('находит экстрактор по URL', () => {
-    const ig = fake('instagram.com');
-    const registry = createRegistry([ig]);
-    expect(registry.find('https://www.instagram.com/p/abc/')).toBe(ig);
-    expect(registry.find(new URL('https://example.com/'))).toBeUndefined();
   });
 });
 

@@ -1,4 +1,4 @@
-import type { PageDataParser } from '@/lib/core/extractor';
+import type { PageDataParser } from '@/lib/core/page-parser';
 import type { MediaPost } from '@/lib/core/media';
 
 /*

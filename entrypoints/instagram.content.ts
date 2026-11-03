@@ -1,10 +1,10 @@
+import { requestDownload, watchDom } from '@/lib/content/page';
 import { createPostCache } from '@/lib/content/post-cache';
 import { hasLargerOriginal, type MediaPost } from '@/lib/core/media';
 import {
   isPageMessage,
   type ContextDownloadRequest,
   type DownloadRequest,
-  type DownloadResponse,
   type HarvestCheckResponse,
   type OriginalRequest,
 } from '@/lib/core/messages';
@@ -186,10 +186,7 @@ function postFromDom(postId: string, slide: Slide, author: string | undefined): 
 // ---- Скачивание ----
 
 async function send(request: DownloadRequest | OriginalRequest): Promise<void> {
-  const response: DownloadResponse = await browser.runtime.sendMessage(request);
-  if (response.errors.length > 0) {
-    throw new Error(response.errors.map((e) => `#${e.index}: ${e.error}`).join('; '));
-  }
+  const response = await requestDownload(request);
   if (response.completed === 0) throw new Error('в данных поста нет этого медиа');
 }
 
@@ -569,25 +566,14 @@ function scan() {
   scanGrid();
 }
 
-function watchDom() {
-  let scheduled = false;
-  // Instagram — SPA: посты появляются и перерисовываются постоянно, пересканируем не чаще раза за кадр
-  const schedule = () => {
-    if (scheduled) return;
-    scheduled = true;
-    requestAnimationFrame(() => {
-      scheduled = false;
-      scan();
-    });
-  };
-  new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true });
+function watchPage() {
+  const schedule = watchDom(scan);
   // В Reels следующий ролик появляется прокруткой, а не изменением DOM
   window.addEventListener('scroll', schedule, { passive: true, capture: true });
   // Загрузка медиа и приход данных не меняют DOM, а от них зависит ожидание в сторис
   document.addEventListener('load', schedule, true);
   document.addEventListener('loadeddata', schedule, true);
   window.addEventListener('message', schedule);
-  scan();
 }
 
 // ---- Контекстное меню «Скачать» ----
@@ -706,10 +692,6 @@ export default defineContentScript({
       .sendMessage({ type: 'harvest-check' })
       .then((target: HarvestCheckResponse) => target && startHarvest(target.postId));
 
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', watchDom, { once: true });
-    } else {
-      watchDom();
-    }
+    watchPage();
   },
 });

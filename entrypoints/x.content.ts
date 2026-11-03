@@ -1,10 +1,10 @@
+import { requestDownload, watchDom } from '@/lib/content/page';
 import { createPostCache } from '@/lib/content/post-cache';
 import type { MediaItem, MediaPost } from '@/lib/core/media';
 import {
   isPageMessage,
   type ContextDownloadRequest,
   type DownloadRequest,
-  type DownloadResponse,
 } from '@/lib/core/messages';
 import { originalPhotoUrl } from '@/lib/sites/x/parse';
 import { createInlineButton, triggerDownload } from '@/lib/ui/download-button';
@@ -47,10 +47,7 @@ function postFromDom(article: Element, postId: string): MediaPost {
 async function downloadTweet(article: Element, postId: string) {
   const post = cache.get(postId) ?? postFromDom(article, postId);
   const request: DownloadRequest = { type: 'download', post };
-  const response: DownloadResponse = await browser.runtime.sendMessage(request);
-  if (response.errors.length > 0) {
-    throw new Error(response.errors.map((e) => `#${e.index}: ${e.error}`).join('; '));
-  }
+  await requestDownload(request);
 }
 
 function hasMedia(article: Element): boolean {
@@ -111,23 +108,6 @@ export default defineContentScript({
       if (message?.type === 'context-download') contextDownload();
     });
 
-    const start = () => {
-      let scheduled = false;
-      // X — SPA с бесконечной лентой: твиты постоянно добавляются и перерисовываются
-      new MutationObserver(() => {
-        if (scheduled) return;
-        scheduled = true;
-        requestAnimationFrame(() => {
-          scheduled = false;
-          scan();
-        });
-      }).observe(document.body, { childList: true, subtree: true });
-      scan();
-    };
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', start, { once: true });
-    } else {
-      start();
-    }
+    watchDom(scan);
   },
 });

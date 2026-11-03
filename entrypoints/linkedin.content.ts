@@ -2,10 +2,10 @@ import type { MediaItem, MediaPost } from '@/lib/core/media';
 import {
   type ContextDownloadRequest,
   type DownloadRequest,
-  type DownloadResponse,
   LINKEDIN_SOURCES_ATTR,
   LINKEDIN_SOURCES_EVENT,
 } from '@/lib/core/messages';
+import { requestDownload, watchDom } from '@/lib/content/page';
 import { createInlineButton, triggerDownload } from '@/lib/ui/download-button';
 
 // LinkedIn: кнопка ⬇ в строке действий поста (реакция, комментарий, репост, отправить).
@@ -118,10 +118,7 @@ async function downloadPost(post: Element) {
     type: 'download',
     post: { site: 'linkedin', postId, author, items, itemCount: items.length } satisfies MediaPost,
   };
-  const response: DownloadResponse = await browser.runtime.sendMessage(request);
-  if (response.errors.length > 0) {
-    throw new Error(response.errors.map((e) => `#${e.index}: ${e.error}`).join('; '));
-  }
+  await requestDownload(request);
 }
 
 function scan() {
@@ -179,16 +176,6 @@ export default defineContentScript({
       if (message?.type === 'context-download') contextDownload();
     });
 
-    let scheduled = false;
-    // Лента LinkedIn подгружается и перерисовывается постоянно
-    new MutationObserver(() => {
-      if (scheduled) return;
-      scheduled = true;
-      requestAnimationFrame(() => {
-        scheduled = false;
-        scan();
-      });
-    }).observe(document.body, { childList: true, subtree: true });
-    scan();
+    watchDom(scan);
   },
 });

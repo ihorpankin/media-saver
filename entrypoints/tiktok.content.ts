@@ -1,3 +1,4 @@
+import { requestDownload, watchDom } from '@/lib/content/page';
 import { createPostCache } from '@/lib/content/post-cache';
 import type { MediaItem, MediaPost } from '@/lib/core/media';
 import {
@@ -5,7 +6,6 @@ import {
   type BytesDownloadRequest,
   type ContextDownloadRequest,
   type DownloadRequest,
-  type DownloadResponse,
 } from '@/lib/core/messages';
 import { loadSettings } from '@/lib/core/settings';
 import { attachOverlayButton, createInlineButton, triggerDownload } from '@/lib/ui/download-button';
@@ -15,12 +15,6 @@ import { attachOverlayButton, createInlineButton, triggerDownload } from '@/lib/
 // кнопка поверх превью. Данные роликов приходят от перехватчика (tiktok-page.content.ts).
 
 const cache = createPostCache();
-
-function throwOnErrors(response: DownloadResponse) {
-  if (response.errors.length > 0) {
-    throw new Error(response.errors.map((e) => `#${e.index}: ${e.error}`).join('; '));
-  }
-}
 
 /** Содержимое ответа в base64 — так байты проходят через сообщения расширения. */
 async function toBase64(blob: Blob): Promise<string> {
@@ -62,7 +56,7 @@ async function downloadVideo(post: MediaPost, item: MediaItem) {
       data: await toBase64(await response.blob()),
       mime: type,
     };
-    throwOnErrors(await browser.runtime.sendMessage(request));
+    await requestDownload(request);
     return;
   }
   throw new Error(lastError);
@@ -75,7 +69,7 @@ async function download(postId: string) {
   if (video) return downloadVideo(post, video);
   // Фото-пост: картинки с tiktokcdn отдаются и обычному скачиванию
   const request: DownloadRequest = { type: 'download', post };
-  throwOnErrors(await browser.runtime.sendMessage(request));
+  await requestDownload(request);
 }
 
 /** id ролика в карточке ленты: у плеера id вида `xgwrapper-0-<id>`. */
@@ -156,25 +150,9 @@ export default defineContentScript({
       if (message?.type === 'context-download') contextDownload();
     });
 
-    const start = () => {
-      let scheduled = false;
-      // TikTok — SPA с бесконечной лентой
-      new MutationObserver(() => {
-        if (scheduled) return;
-        scheduled = true;
-        requestAnimationFrame(() => {
-          scheduled = false;
-          scanFeed();
-          scanTiles();
-        });
-      }).observe(document.body, { childList: true, subtree: true });
+    watchDom(() => {
       scanFeed();
       scanTiles();
-    };
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', start, { once: true });
-    } else {
-      start();
-    }
+    });
   },
 });

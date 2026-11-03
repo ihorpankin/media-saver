@@ -1,5 +1,5 @@
+import { requestDownload, watchDom } from '@/lib/content/page';
 import type {
-  DownloadResponse,
   YoutubeProgressMessage,
   YoutubeThumbnailRequest,
   YoutubeVideoRequest,
@@ -12,10 +12,6 @@ import { createInlineButton, setProgress } from '@/lib/ui/download-button';
 // В лентах и Shorts превью скачивается через контекстное меню (lib/background/context-menu.ts).
 
 const ROW = 'ytd-watch-metadata #top-level-buttons-computed';
-
-function throwOnErrors(response: DownloadResponse) {
-  if (response.errors.length > 0) throw new Error(response.errors.map((e) => e.error).join('; '));
-}
 
 function currentVideoId(): string {
   const videoId = videoIdFromUrl(location.href);
@@ -38,7 +34,7 @@ async function downloadThumbnail() {
     videoId: currentVideoId(),
     author,
   };
-  throwOnErrors(await browser.runtime.sendMessage(request));
+  await requestDownload(request);
 }
 
 /** Ролик, который сейчас качается, и его кнопка — чтобы показывать на ней проценты. */
@@ -50,7 +46,7 @@ async function downloadVideo(host: HTMLElement) {
   active = { url, host };
   const request: YoutubeVideoRequest = { type: 'youtube-video', url };
   try {
-    throwOnErrors(await browser.runtime.sendMessage(request));
+    await requestDownload(request);
   } finally {
     active = undefined;
   }
@@ -125,16 +121,6 @@ export default defineContentScript({
       }
     });
 
-    let scheduled = false;
-    // YouTube — SPA: кнопки под роликом перерисовываются при переходах, пересканируем не чаще раза за кадр
-    new MutationObserver(() => {
-      if (scheduled) return;
-      scheduled = true;
-      requestAnimationFrame(() => {
-        scheduled = false;
-        scan();
-      });
-    }).observe(document.body, { childList: true, subtree: true });
-    scan();
+    watchDom(scan);
   },
 });

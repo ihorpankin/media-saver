@@ -9,7 +9,7 @@
 type State = 'idle' | 'waiting' | 'loading' | 'done' | 'error';
 
 /** Атрибут на контейнере, чтобы не ставить вторую кнопку в то же место. */
-export const ATTACHED_ATTR = 'data-media-saver';
+const ATTACHED_ATTR = 'data-media-saver';
 
 const ICONS: Record<State, string> = {
   idle: '<path d="M12 3.5v12m0 0-5-5m5 5 5-5M4.5 20h15"/>',
