@@ -47,6 +47,20 @@ export function shortcodeFromPk(pk: string): string {
   return code;
 }
 
+/**
+ * shortcode → media pk. У постов из закрытых аккаунтов к шорткоду бывает дописан хвост,
+ * сам pk закодирован в первых 11 символах.
+ */
+export function pkFromShortcode(code: string): string {
+  let n = 0n;
+  for (const char of code.slice(0, 11)) {
+    const digit = SHORTCODE_ALPHABET.indexOf(char);
+    if (digit < 0) throw new Error(`не шорткод: ${code}`);
+    n = n * 64n + BigInt(digit);
+  }
+  return n.toString();
+}
+
 function isMedia(value: object): value is IgMedia {
   const media = value as IgMedia;
   return (

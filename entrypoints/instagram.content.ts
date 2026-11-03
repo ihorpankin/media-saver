@@ -8,6 +8,7 @@ import {
   type HarvestCheckResponse,
   type OriginalRequest,
 } from '@/lib/core/messages';
+import { fetchPost } from '@/lib/sites/instagram/api';
 import {
   attachOverlayButton,
   createInlineButton,
@@ -162,10 +163,11 @@ function authorOf(root: Element): string | undefined {
 }
 
 /** Запасной путь (A): видимое фото прямо из DOM. Видео так не скачать — у него blob-ссылка. */
-function postFromDom(postId: string, slide: Slide, author: string | undefined): MediaPost {
-  if (!(slide.media instanceof HTMLImageElement)) {
-    throw new Error('нет данных о видео — обновите страницу');
-  }
+function postFromDom(
+  postId: string,
+  slide: Slide & { media: HTMLImageElement },
+  author: string | undefined,
+): MediaPost {
   return {
     site: 'instagram',
     postId,
@@ -210,23 +212,41 @@ function resolvePost(source: PostSource, slide: Slide | undefined): MediaPost | 
   );
 }
 
+/**
+ * Пост из кэша, а если его там нет — одним запросом к API Instagram (запасной путь B).
+ * Без id (первая сторис автора, хайлайты) запрашивать нечего.
+ */
+async function loadPost(source: PostSource, slide: Slide | undefined): Promise<MediaPost> {
+  const cached = resolvePost(source, slide);
+  if (cached) return cached;
+  const id = source.postId();
+  if (!id) throw new Error('нет данных об этой истории — обновите страницу');
+  const post = await fetchPost(id);
+  cache.add(post);
+  return post;
+}
+
 async function downloadSlide(source: PostSource) {
   const root = source.root();
   const slide = visibleSlide(root, source.postId());
   if (!slide) throw new Error('не нашёл медиа в посте');
-  const post = resolvePost(source, slide);
-  if (post) {
-    await send({ type: 'download', post, indexes: [slide.index] });
+  let post: MediaPost;
+  try {
+    post = await loadPost(source, slide);
+  } catch (error) {
+    // Последний рубеж (A): видимое фото прямо со страницы
+    const id = source.postId();
+    const { media } = slide;
+    if (!id || !(media instanceof HTMLImageElement)) throw error;
+    console.warn('[media-saver] запасной запрос не удался, беру фото со страницы:', error);
+    await send({ type: 'download', post: postFromDom(id, { ...slide, media }, authorOf(root)) });
     return;
   }
-  const id = source.postId();
-  if (!id) throw new Error('нет данных об этой истории — обновите страницу');
-  await send({ type: 'download', post: postFromDom(id, slide, authorOf(root)) });
+  await send({ type: 'download', post, indexes: [slide.index] });
 }
 
 async function downloadAll(source: PostSource) {
-  const post = resolvePost(source, visibleSlide(source.root(), source.postId()));
-  if (!post) throw new Error('нет данных поста — обновите страницу');
+  const post = await loadPost(source, visibleSlide(source.root(), source.postId()));
   await send({ type: 'download', post });
 }
 

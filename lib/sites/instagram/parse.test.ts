@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { bestCandidate, instagramPageParser, parseInstagram, shortcodeFromPk } from './parse';
+import {
+  bestCandidate,
+  instagramPageParser,
+  parseInstagram,
+  pkFromShortcode,
+  shortcodeFromPk,
+} from './parse';
 
 // Структуры повторяют реальные ответы (см. docs/instagram.md), значения выдуманы
 const cdn = (name: string, stp: string) =>
@@ -218,5 +224,17 @@ describe('shouldParse', () => {
     expect(instagramPageParser.shouldParse('/api/graphql')).toBe(true);
     expect(instagramPageParser.shouldParse('/api/v1/media/1/info/')).toBe(true);
     expect(instagramPageParser.shouldParse('/ajax/bz?__a=1')).toBe(false);
+  });
+});
+
+describe('pkFromShortcode', () => {
+  it('обратно к shortcodeFromPk', () => {
+    expect(pkFromShortcode('DfM_W2rE0Dp')).toBe('4020867214798438633');
+    expect(shortcodeFromPk(pkFromShortcode('B'))).toBe('B');
+  });
+
+  it('хвост закрытого поста отбрасывается, мусор — ошибка', () => {
+    expect(pkFromShortcode('DfM_W2rE0DpAbCdEfGhIjKlMnOpQrStUvWxYz')).toBe('4020867214798438633');
+    expect(() => pkFromShortcode('Df.W')).toThrow();
   });
 });
