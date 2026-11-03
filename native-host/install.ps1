@@ -10,8 +10,8 @@ param([switch]$Uninstall)
 
 $ErrorActionPreference = 'Stop'
 $name = 'com.media_saver.ytdlp'
-# Fixed by the "key" in wxt.config.ts
-$extensionId = 'obnhohflfmafplbppiampibaklfnhjpf'
+# Media Saver for YouTube, fixed by the "key" in wxt.youtube.config.ts
+$extensionId = 'mbelopldolpphlmgglnhbpklcoopjhjj'
 $registryKey = "HKCU:\Software\Google\Chrome\NativeMessagingHosts\$name"
 $manifestPath = Join-Path $PSScriptRoot "$name.json"
 $launcherPath = Join-Path $PSScriptRoot 'host-run.bat'

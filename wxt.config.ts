@@ -5,20 +5,17 @@ export default defineConfig({
     name: 'Media Saver',
     description: 'Скачивание медиа из соцсетей одним кликом',
     // Публичный ключ фиксирует id расширения: obnhohflfmafplbppiampibaklfnhjpf.
-    // Без него id зависел бы от папки, а хелпер yt-dlp (native-host/) пускает только этот id
+    // Без него id зависел бы от папки, и при переносе сборки терялись бы настройки.
+    // YouTube — отдельное расширение со своим конфигом: wxt.youtube.config.ts
     key: 'MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAn8nye9WXE/kL5bLQbEq+YUT44bP2PSm5kXFTrtmmBV4w+naLT4xoOtt8CDpXW2y1K87E7mU/jxZBcNEz33CXn+XXhT7eWu+d66AXk1CHL8y+sbNgDCa1h7HfPzWC9woAFcNQt21t61fsoTZInPmvAZPJ6RuEKQH7QbjCgi8sclvkt1BtvzwxufnQyo47AgiqSuK4ExCgIYul9qHZ2lSL2RAuuhwjlqoteggjNV82OGx2zO05jg4WtJfVW3gTFDkirbecwV9m9P21oi3ooZtaajF0YU28qAsouh4fD2XodYX6/McgX1VdqKupQonL4alwb9Yhi+lDAqpGY9evzYnvXQIDAQAB',
     // offscreen — скрытая страница для склейки видео и звука (см. lib/background/video.ts)
     // storage — настройки (lib/core/settings.ts)
     // contextMenus — пункт «Скачать» по правому клику на фото и видео
-    // nativeMessaging — связь с хелпером yt-dlp для видео с YouTube (native-host/)
-    permissions: ['downloads', 'offscreen', 'storage', 'contextMenus', 'nativeMessaging'],
+    permissions: ['downloads', 'offscreen', 'storage', 'contextMenus'],
     host_permissions: [
       '*://*.instagram.com/*',
       '*://*.cdninstagram.com/*',
       '*://*.fbcdn.net/*',
-      '*://www.youtube.com/*',
-      // превью роликов YouTube
-      '*://i.ytimg.com/*',
       '*://x.com/*',
       '*://twitter.com/*',
       // фото и видео X

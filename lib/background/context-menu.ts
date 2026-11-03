@@ -1,7 +1,5 @@
 import type { ContextDownloadRequest, DownloadMode } from '@/lib/core/messages';
 import { loadSettings, settingsItem, type Settings } from '@/lib/core/settings';
-import { videoIdFromUrl } from '@/lib/sites/youtube/thumbnail';
-import { downloadThumbnail } from './youtube';
 
 /*
  * Контекстное меню по правому клику в Instagram:
@@ -36,7 +34,7 @@ const DOWNLOADS: Array<[id: string, mode: DownloadMode, title: string]> = [
   ['download-original', 'original', 'Скачать оригинал (HD)'],
 ];
 
-const QUALITY: Array<[id: string, value: Settings['videoQuality'], title: string]> = [
+export const QUALITY: Array<[id: string, value: Settings['videoQuality'], title: string]> = [
   ['quality-best', 'best', 'Видео: лучшее качество'],
   ['quality-compatible', 'compatible', 'Видео: совместимое (720p, H.264)'],
 ];
@@ -81,17 +79,7 @@ async function build() {
     title: 'Все настройки…',
     contexts: ['image', 'video', 'page'],
   });
-
-  // YouTube: превью ролика — по правому клику на плитке в любой ленте или на странице ролика
-  browser.contextMenus.create({
-    id: YT_THUMBNAIL,
-    title: 'Скачать превью (Media Saver)',
-    contexts: ['link', 'image', 'video', 'page'],
-    documentUrlPatterns: ['*://*.youtube.com/*'],
-  });
 }
-
-const YT_THUMBNAIL = 'youtube-thumbnail';
 
 /** Отметки в меню отражают настройки, даже если их поменяли на странице настроек. */
 function syncChecks(settings: Settings) {
@@ -101,7 +89,7 @@ function syncChecks(settings: Settings) {
   void browser.contextMenus.update(SAVE_AS, { checked: settings.saveAs });
 }
 
-async function updateSettings(patch: Partial<Settings>) {
+export async function updateSettings(patch: Partial<Settings>) {
   await settingsItem.setValue({ ...(await loadSettings()), ...patch });
 }
 
@@ -112,18 +100,6 @@ export function setupContextMenu() {
 
   browser.contextMenus.onClicked.addListener((info, tab) => {
     const id = String(info.menuItemId);
-
-    if (id === YT_THUMBNAIL) {
-      // Плитка ролика — ссылка на него; если кликнули не по плитке, берём ролик со страницы
-      const videoId =
-        videoIdFromUrl(info.linkUrl) ?? videoIdFromUrl(info.srcUrl) ?? videoIdFromUrl(info.pageUrl);
-      if (videoId) {
-        void downloadThumbnail(videoId).then((r) => {
-          if (r.errors.length) console.warn('[media-saver] превью не скачалось:', r.errors);
-        });
-      }
-      return;
-    }
 
     const download = DOWNLOADS.find(([itemId]) => itemId === id);
     if (download && tab?.id !== undefined) {

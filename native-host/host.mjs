@@ -35,7 +35,7 @@ const YTDLP = config.ytdlp || 'yt-dlp';
 const FFMPEG = config.ffmpeg || 'ffmpeg';
 
 // Папка — адрес канала (@handle): он уникален и не меняется при переименовании канала.
-// Так же называет папку расширение для превью (entrypoints/youtube.content.ts)
+// Так же называет папку расширение для превью (apps/youtube/youtube.content.ts)
 const OUTPUT = join(
   homedir(),
   'Downloads',

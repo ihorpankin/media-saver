@@ -9,10 +9,11 @@
 | Сайт      | Что скачивает                                                                              |
 | --------- | ------------------------------------------------------------------------------------------ |
 | Instagram | фото, карусели (текущий слайд или «Все N»), видео и Reels, сторис, хайлайты, оригинал «HD» |
-| YouTube   | превью; видео и Shorts — через yt-dlp (см. ниже)                                           |
 | X         | фото в оригинале, видео и GIF                                                              |
 | TikTok    | видео и фото-посты                                                                         |
 | LinkedIn  | фото и видео из постов                                                                     |
+
+YouTube — отдельное расширение **Media Saver for YouTube** в этом же репозитории (см. ниже): ему нужен хелпер на компьютере и права, которые Web Store не пропустит.
 
 Файлы сохраняются в `Загрузки/<сайт>/<автор>/<id>_<n>.<ext>` (шаблон меняется в настройках).
 
@@ -44,7 +45,18 @@ npm run format
 
 Дальше изменения в коде подхватываются сами, пока работает `npm run dev`.
 
-## Видео с YouTube: хелпер yt-dlp (один раз)
+## Media Saver for YouTube
+
+Отдельное расширение: кнопки «Видео» и «Превью» под роликом и в Shorts, превью из любой ленты — по правому клику. Код — `apps/youtube/` и общий `lib/`, конфиг — `wxt.youtube.config.ts`.
+
+```bash
+npm run dev:youtube    # .output/youtube/chrome-mv3-dev, можно параллельно с npm run dev
+npm run build:youtube  # .output/youtube/chrome-mv3
+```
+
+Подключается так же, как основное: «Загрузить распакованное расширение» → папка сборки.
+
+### Хелпер yt-dlp (один раз)
 
 Видео с YouTube качает [yt-dlp](https://github.com/yt-dlp/yt-dlp) на компьютере, расширение передаёт ему ссылку через Native Messaging (`native-host/`). Превью работают и без этого.
 
@@ -56,7 +68,7 @@ powershell -ExecutionPolicy Bypass -File native-host\install.ps1
 
 `install.ps1` регистрирует хелпер для Chrome в реестре текущего пользователя (без прав администратора) и записывает точные пути к `node`, `yt-dlp` и `ffmpeg` (`host-run.bat`, `host-config.json`): Chrome запускает хелпер со своим PATH, который может быть старше установки yt-dlp. Если переустановили или обновили эти программы через winget и путь поменялся — запустите `install.ps1` ещё раз. Удалить регистрацию: `install.ps1 -Uninstall`.
 
-Видео сохраняются в `Загрузки\youtube\<канал>\<название> [id].mp4`. Качество берётся из настроек расширения. Если YouTube начнёт отдавать ошибки про PO Token — обновите yt-dlp (`winget upgrade yt-dlp.yt-dlp`) и при необходимости поставьте плагин [bgutil-ytdlp-pot-provider](https://github.com/yt-dlp/yt-dlp/wiki/PO-Token-Guide).
+Видео сохраняются в `Загрузки\youtube\<канал>\<название> [id].mp4`. Качество выбирается в меню по правому клику: «Media Saver for YouTube ▸ Видео: …». Если YouTube начнёт отдавать ошибки про PO Token — обновите yt-dlp (`winget upgrade yt-dlp.yt-dlp`) и при необходимости поставьте плагин [bgutil-ytdlp-pot-provider](https://github.com/yt-dlp/yt-dlp/wiki/PO-Token-Guide).
 
 ## Установка сборки вручную
 
