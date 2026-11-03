@@ -1,6 +1,6 @@
-// Рисует PNG-иконки расширений из icons/: npm run icons
-// SVG масштабируется как есть. У PNG обрезаются прозрачные поля: картинка вписывается в квадрат
-// с небольшим отступом, иначе в 16×16 от неё почти ничего не остаётся.
+// Renders the extensions' PNG icons from icons/: npm run icons
+// SVG is scaled as is. PNG has its transparent margins trimmed: the picture is fitted into a square
+// with a small padding, otherwise almost nothing is left of it at 16×16.
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { Resvg } from '@resvg/resvg-js';
 
@@ -19,7 +19,7 @@ function pngToSvg(file) {
   const wrap = (viewBox) =>
     `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${viewBox}">${image}</svg>`;
 
-  // Границы непрозрачной части.
+  // Bounds of the opaque part.
   const { pixels } = new Resvg(wrap(`0 0 ${width} ${height}`)).render();
   let [x0, y0, x1, y1] = [width, height, -1, -1];
   for (let y = 0; y < height; y++) {

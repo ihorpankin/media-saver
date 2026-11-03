@@ -1,20 +1,20 @@
-# Публикация Media Saver в Chrome Web Store
+# Publishing Media Saver to the Chrome Web Store
 
-Тексты для формы магазина — копировать как есть. Расширение для YouTube в магазин не идёт: Native Messaging и скачивание видео с YouTube правила стора не пропускают.
+Texts for the store form, to copy as is. The YouTube extension doesn't go to the store: the store rules don't allow Native Messaging and downloading YouTube videos.
 
-## Порядок
+## Steps
 
-1. `npm run zip:store` → `.output/media-saver-<версия>-chrome.zip` (сборка без поля `key`).
-2. Пройти [чек-лист](checklist.md) на этой версии.
-3. Политика конфиденциальности ([privacy.md](privacy.md)) опубликована страницей: https://claude.ai/artifact/W9ads55qLVLhpSDB6B3nBh — в её меню Share нужно открыть доступ по ссылке. При изменении privacy.md обновить и страницу.
-4. [Chrome Web Store Developer Dashboard](https://chrome.google.com/webstore/devconsole) → новый элемент → загрузить zip, заполнить поля ниже.
-5. После публикации магазин выдаст расширению свой id — он будет отличаться от id локальной сборки (`obnhohflfmafplbppiampibaklfnhjpf`), это нормально.
+1. `npm run zip:store` → `.output/media-saver-<version>-chrome.zip` (a build without the `key` field).
+2. Go through the [checklist](checklist.md) on this version.
+3. The privacy policy ([privacy.md](privacy.md)) is published as a page: https://claude.ai/artifact/W9ads55qLVLhpSDB6B3nBh (link access is turned on in its Share menu). When privacy.md changes, update the page too.
+4. [Chrome Web Store Developer Dashboard](https://chrome.google.com/webstore/devconsole) → new item → upload the zip, fill in the fields below.
+5. After publishing, the store gives the extension its own id. It differs from the local build's id (`obnhohflfmafplbppiampibaklfnhjpf`), that's expected.
 
-Обновление: поднять `version` в `package.json` (`npm version patch`), снова `npm run zip:store`, загрузить новый zip.
+Updating: bump `version` in `package.json` (`npm version patch`), run `npm run zip:store` again, upload the new zip.
 
-## Карточка
+## Listing
 
-Все тексты для магазина — на английском, как и интерфейс расширения.
+All store texts are in English, like the extension's interface.
 
 **Name:** Media Saver
 
@@ -42,7 +42,7 @@ Download photos and videos from Instagram, X, TikTok and LinkedIn in one click �
 
 **Small promo tile (440×280):** `store-assets/promo-440x280.png`.
 
-## Вкладка Privacy
+## Privacy tab
 
 **Single purpose:**
 Download photos and videos that the user has opened on Instagram, X, TikTok and LinkedIn to the Downloads folder.
@@ -64,7 +64,7 @@ Download photos and videos that the user has opened on Instagram, X, TikTok and 
 
 **Privacy policy:** https://claude.ai/artifact/W9ads55qLVLhpSDB6B3nBh
 
-## Риски проверки
+## Review risks
 
-- Правила стора запрещают помогать нарушать авторские права. Загрузчики Instagram и TikTok в магазине есть, но их иногда снимают по жалобам сайтов. Поэтому в описании прямо сказано: только то, что пользователь открыл сам, для личного использования.
-- Скрипты в контексте страницы (MAIN world) читают ответы сайта. Это нормально, но в описании разрешений стоит отвечать спокойно и конкретно, как выше.
+- The store rules forbid helping to infringe copyright. Instagram and TikTok downloaders exist in the store, but they are sometimes removed after complaints from the sites. So the description says plainly: only what the user opened, for personal use.
+- Scripts in the page context (MAIN world) read the site's responses. That's fine, but the permission justifications should answer calmly and specifically, as above.

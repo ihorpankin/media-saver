@@ -2,8 +2,8 @@ import { PAGE_CHANNEL, type PagePostsMessage } from '@/lib/core/messages';
 import { installInterceptor } from '@/lib/page/interceptor';
 import { xPageParser } from '@/lib/sites/x/parse';
 
-// Как instagram-page.content.ts, но для X: твиты приходят только через XHR в GraphQL-ответах,
-// встроенных данных на странице нет. Работает в контексте страницы с самого начала загрузки.
+// Like instagram-page.content.ts, but for X: tweets come only through XHR in GraphQL responses,
+// there is no embedded data on the page. Runs in the page context from the very start of loading.
 export default defineContentScript({
   matches: ['*://x.com/*', '*://twitter.com/*'],
   world: 'MAIN',

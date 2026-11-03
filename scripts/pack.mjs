@@ -1,10 +1,10 @@
-// Собирает оба расширения и кладёт в постоянные папки release/: npm run pack
-// Chrome подключается к этим папкам один раз («Загрузить распакованное расширение»),
-// дальше после каждого pack достаточно нажать ⟳ у расширения в chrome://extensions.
+// Builds both extensions into the permanent release/ folders: npm run pack
+// Chrome is pointed at these folders once ("Load unpacked"),
+// after that each pack only needs a ⟳ on the extension in chrome://extensions.
 import { execSync } from 'node:child_process';
 import { cpSync, readFileSync, rmSync } from 'node:fs';
 
-// Основное расширение последним: сборка заодно обновляет типы в .wxt/, а их проверяет tsc
+// The main extension goes last: its build also updates the types in .wxt/, which tsc checks
 const builds = [
   [
     'wxt build -c wxt.youtube.config.ts',

@@ -1,13 +1,13 @@
 import type { MediaPost } from '@/lib/core/media';
 
 /*
- * Превью роликов YouTube. Картинки лежат на i.ytimg.com по предсказуемым адресам, от большей
- * к меньшей: maxresdefault (1280×720 и больше) есть не у всех роликов, hqdefault — у всех.
+ * YouTube video thumbnails. The images are on i.ytimg.com at predictable URLs, from largest
+ * to smallest: not every video has maxresdefault (1280×720 and up), every video has hqdefault.
  */
 
 const ID = /^[\w-]{11}$/;
 
-/** id ролика из ссылки: watch?v=…, /shorts/…, youtu.be/…, /embed/…, /live/… */
+/** Video id from a link: watch?v=…, /shorts/…, youtu.be/…, /embed/…, /live/… */
 export function videoIdFromUrl(url: string | undefined): string | undefined {
   if (!url) return undefined;
   try {
@@ -30,14 +30,14 @@ export function videoIdFromUrl(url: string | undefined): string | undefined {
   }
 }
 
-/** Адреса превью от самого большого к самому маленькому. */
+/** Thumbnail URLs from largest to smallest. */
 export function thumbnailCandidates(videoId: string): string[] {
   return ['maxresdefault', 'sddefault', 'hqdefault'].map(
     (name) => `https://i.ytimg.com/vi/${videoId}/${name}.jpg`,
   );
 }
 
-/** Пост для скачивания превью: `youtube/<канал>/<id>.jpg`. */
+/** A post for downloading the thumbnail: `youtube/<channel>/<id>.jpg`. */
 export function thumbnailPost(videoId: string, url: string, author?: string): MediaPost {
   return {
     site: 'youtube',

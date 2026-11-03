@@ -2,7 +2,7 @@ import { buildFilename } from '@/lib/core/filename';
 import type { MediaPost } from '@/lib/core/media';
 import { DEFAULT_SETTINGS, loadSettings, settingsItem, type Settings } from '@/lib/core/settings';
 
-// Страница настроек. Каждое изменение сохраняется сразу, кнопки «Сохранить» нет.
+// Settings page. Every change is saved immediately, there is no Save button.
 
 const $ = <T extends HTMLElement>(selector: string) => document.querySelector<T>(selector)!;
 
@@ -10,7 +10,7 @@ const template = $<HTMLInputElement>('#template');
 const saveAs = $<HTMLInputElement>('#save-as');
 const status = $<HTMLElement>('#status');
 
-// Пример поста для предпросмотра имени файла
+// Sample post for the file name preview
 const sample = (count: number): MediaPost => ({
   site: 'instagram',
   postId: 'DfM_W2rE0Dp',
@@ -52,7 +52,7 @@ async function init() {
   renderPreview();
 
   template.addEventListener('input', renderPreview);
-  // Сохраняем, когда пользователь закончил править, а не на каждую букву
+  // Save when the user has finished editing, not on every keystroke
   template.addEventListener('change', () => {
     template.value = template.value.trim() || DEFAULT_SETTINGS.template;
     void save({ template: template.value });

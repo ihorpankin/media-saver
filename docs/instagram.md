@@ -1,197 +1,197 @@
-# Instagram — как достаются медиа
+# Instagram: how media is obtained
 
-Результат задачи 1.1: что мы узнали из исходников трёх живых проектов. Всё здесь ещё нужно сверить с живыми страницами (задача 1.2).
+The result of task 1.1: what we learned from the sources of three live projects. Everything here still had to be checked against live pages (task 1.2).
 
-| Проект                                                | Версия / дата коммита | Лицензия | Что изучено                                                                     |
-| ----------------------------------------------------- | --------------------- | -------- | ------------------------------------------------------------------------------- |
-| [gallery-dl](https://github.com/mikf/gallery-dl)      | 1.32.19, 2026-10-31   | GPL-2.0  | `gallery_dl/extractor/instagram.py`                                             |
-| [IG Helper](https://github.com/SN-Koarashi/ig-helper) | 4.3.5, 2026-11-01     | GPL-3.0  | `src/utils/api.js`, `src/utils/general.js`, `src/functions/post.js`, `story.js` |
-| [SocialSnag](https://github.com/jamditis/socialsnag)  | 1.3.0, 2026-09-23     | MIT      | `manifest.json`, `src/background.js`, `src/platforms/instagram*.js`             |
+| Project                                               | Version / commit date | License | What was studied                                                                |
+| ----------------------------------------------------- | --------------------- | ------- | ------------------------------------------------------------------------------- |
+| [gallery-dl](https://github.com/mikf/gallery-dl)      | 1.32.19, 2026-10-31   | GPL-2.0 | `gallery_dl/extractor/instagram.py`                                             |
+| [IG Helper](https://github.com/SN-Koarashi/ig-helper) | 4.3.5, 2026-11-01     | GPL-3.0 | `src/utils/api.js`, `src/utils/general.js`, `src/functions/post.js`, `story.js` |
+| [SocialSnag](https://github.com/jamditis/socialsnag)  | 1.3.0, 2026-09-23     | MIT     | `manifest.json`, `src/background.js`, `src/platforms/instagram*.js`             |
 
-Код GPL-проектов не копируем, берём только знания о протоколе. Код SocialSnag (MIT) можно брать с указанием авторства.
-
----
-
-## Главный вывод
-
-**Ни один из трёх проектов не перехватывает сетевые запросы (способ C).** Все они делают собственные запросы к API (способ B), а в запасе у них DOM (способ A). Значит, C пока не проверен на практике, и задача 1.2 должна в первую очередь его подтвердить. **Задача 1.2 его подтвердила, результаты в конце документа.** При этом всё изученное говорит в пользу C:
-
-- GraphQL-ответы самой страницы содержат те же объекты медиа, что и REST API: `image_versions2`, `video_versions`, `carousel_media`. Это видно по корневым полям `xdt_api__v1__...` (см. ниже), то есть это обёртки над REST-моделью.
-- Значит, один парсер медиа-объекта подойдёт и для C, и для B.
+No code is copied from the GPL projects, only knowledge of the protocol. SocialSnag code (MIT) can be used with attribution.
 
 ---
 
-## Идентификаторы
+## Main finding
 
-- **shortcode ↔ media id.** Шорткод — это число в base64 с алфавитом `A–Z a–z 0–9 - _`. В JS переводим через `BigInt` (готовая функция есть в SocialSnag: `shortcodeToMediaId`).
-- **Длинные шорткоды.** У приватных постов шорткод длиннее 28 символов. gallery-dl в этом случае отрезает последние 28 символов и только потом декодирует.
-- **URL-ы:** `/p/<code>/`, `/reel/<code>/`, `/stories/<username>/<media_id>/`, `/stories/highlights/<highlight_id>/`.
-- **user id по username:**
+**None of the three projects intercepts network requests (method C).** They all make their own API requests (method B), with the DOM as a fallback (method A). So C was untested in practice, and task 1.2 had to confirm it first. **Task 1.2 confirmed it, the results are at the end of this document.** Everything studied speaks in favor of C:
+
+- The page's own GraphQL responses contain the same media objects as the REST API: `image_versions2`, `video_versions`, `carousel_media`. The root fields `xdt_api__v1__...` (see below) show that they are wrappers over the REST model.
+- So one media object parser works for both C and B.
+
+---
+
+## Identifiers
+
+- **shortcode ↔ media id.** A shortcode is a number in base64 with the alphabet `A–Z a–z 0–9 - _`. In JS it's converted with `BigInt` (SocialSnag has a ready function: `shortcodeToMediaId`).
+- **Long shortcodes.** Private posts have shortcodes longer than 28 characters. gallery-dl cuts off the last 28 characters before decoding in that case.
+- **URLs:** `/p/<code>/`, `/reel/<code>/`, `/stories/<username>/<media_id>/`, `/stories/highlights/<highlight_id>/`.
+- **user id by username:**
   - `GET /api/v1/users/web_profile_info/?username=…` → `data.user.id`
-  - или из HTML профиля по регулярке `"page_id":"profilePage_(\d+)"` (так делает IG Helper)
+  - or from the profile HTML with the regex `"page_id":"profilePage_(\d+)"` (as IG Helper does)
 
-## Модель медиа-объекта
+## Media object model
 
-Важные поля (REST и `xdt_api__` GraphQL):
+Important fields (REST and `xdt_api__` GraphQL):
 
-| Поле                                | Значение                                                                                                                                                                                                                 |
-| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `pk` / `id`                         | id медиа (`id` бывает вида `<pk>_<user_id>`). **Ловушка:** `pk` иногда приходит JSON-числом больше 2^53 и теряет младшие цифры в `JSON.parse`. Поэтому берём pk из строкового `id` (часть до `_`), как делает SocialSnag |
-| `code`                              | шорткод                                                                                                                                                                                                                  |
-| `user.username`, `owner.username`   | автор                                                                                                                                                                                                                    |
-| `taken_at`                          | unix-время публикации                                                                                                                                                                                                    |
-| `media_type`                        | 1 — фото, 2 — видео, 8 — карусель                                                                                                                                                                                        |
-| `carousel_media[]`                  | элементы карусели, у каждого свои `image_versions2` / `video_versions`                                                                                                                                                   |
-| `image_versions2.candidates[]`      | `{url, width, height}` — варианты картинки                                                                                                                                                                               |
-| `video_versions[]`                  | `{url, width, height, type}` — прогрессивные mp4                                                                                                                                                                         |
-| `video_dash_manifest`               | MPD (XML) с раздельными дорожками видео и аудио, часто лучше качеством                                                                                                                                                   |
-| `original_width`, `original_height` | размер оригинала                                                                                                                                                                                                         |
-| `expiring_at`                       | есть у сторис                                                                                                                                                                                                            |
+| Field                               | Meaning                                                                                                                                                                                                                                  |
+| ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pk` / `id`                         | media id (`id` can look like `<pk>_<user_id>`). **Trap:** `pk` sometimes arrives as a JSON number above 2^53 and loses its low digits in `JSON.parse`. So the pk is taken from the string `id` (the part before `_`), as SocialSnag does |
+| `code`                              | shortcode                                                                                                                                                                                                                                |
+| `user.username`, `owner.username`   | author                                                                                                                                                                                                                                   |
+| `taken_at`                          | unix publication time                                                                                                                                                                                                                    |
+| `media_type`                        | 1 photo, 2 video, 8 carousel                                                                                                                                                                                                             |
+| `carousel_media[]`                  | carousel items, each with its own `image_versions2` / `video_versions`                                                                                                                                                                   |
+| `image_versions2.candidates[]`      | `{url, width, height}`: image variants                                                                                                                                                                                                   |
+| `video_versions[]`                  | `{url, width, height, type}`: progressive mp4s                                                                                                                                                                                           |
+| `video_dash_manifest`               | MPD (XML) with separate video and audio tracks, often better quality                                                                                                                                                                     |
+| `original_width`, `original_height` | original size                                                                                                                                                                                                                            |
+| `expiring_at`                       | present on stories                                                                                                                                                                                                                       |
 
-## Выбор лучшего качества
+## Choosing the best quality
 
-**Фото.** Подходы в проектах отличаются:
+**Photos.** The projects differ:
 
-- gallery-dl берёт `candidates[0]`: обычно он самый большой.
-- SocialSnag берёт кандидата с максимальной площадью `width × height`.
-- IG Helper сортирует кандидатов по **длине параметра `stp`** в URL: чем он короче, тем меньше серверных преобразований (кроп, ресайз) и тем ближе к оригиналу. Тонкий момент, о котором два других проекта не знают.
+- gallery-dl takes `candidates[0]`: it's usually the largest.
+- SocialSnag takes the candidate with the largest area `width × height`.
+- IG Helper sorts candidates by **the length of the `stp` parameter** in the URL: the shorter it is, the fewer server transformations (crop, resize) and the closer to the original. A subtle point the other two projects don't know.
 
-**Наше правило:** максимальная площадь, при равенстве — самый короткий `stp`. Если лучший кандидат заметно меньше `original_width`, пишем предупреждение. По опыту gallery-dl, это признак протухшей сессии.
+**Our rule:** the largest area, on a tie the shortest `stp`. If the best candidate is noticeably smaller than `original_width`, log a warning. In gallery-dl's experience, that's a sign of a stale session.
 
-**Видео.**
+**Video.**
 
-- Из `video_versions` берём максимальное по `width`, `height`, `type` (gallery-dl).
-- `video_dash_manifest` часто даёт качество лучше прогрессивного mp4, но видео и звук идут отдельно. IG Helper разбирает MPD (`Representation` → `BaseURL`, выбирает по `height`, затем по `bandwidth`) и **склеивает дорожки прямо в браузере библиотекой [Mediabunny](https://mediabunny.dev)**, без ffmpeg.wasm. Это стоит взять за образец.
-- gallery-dl предупреждает: с не-Chrome User-Agent качество видео ниже. Нас это не касается, мы работаем в Chrome.
+- From `video_versions` take the maximum by `width`, `height`, `type` (gallery-dl).
+- `video_dash_manifest` often gives better quality than the progressive mp4, but video and audio come separately. IG Helper parses the MPD (`Representation` → `BaseURL`, chooses by `height`, then by `bandwidth`) and **muxes the tracks right in the browser with the [Mediabunny](https://mediabunny.dev) library**, without ffmpeg.wasm. Worth following.
+- gallery-dl warns that with a non-Chrome User-Agent the video quality is lower. That doesn't affect us, we run in Chrome.
 
 ---
 
-## API для запасного пути (B)
+## API for the fallback (B)
 
-### REST (стабильнее, рекомендую)
+### REST (more stable, recommended)
 
-| Что                     | Запрос                                                                                                              |
-| ----------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| Пост / Reels / карусель | `GET /api/v1/media/{media_id}/info/` → `items[0]`                                                                   |
-| Сторис пользователя     | `GET /api/v1/feed/reels_media/?reel_ids={user_id}` → `reels_media[0].items`, автор — `reels_media[0].user.username` |
-| Хайлайт                 | то же с `reel_ids=highlight:{id}`                                                                                   |
-| Список хайлайтов        | `GET /api/v1/highlights/{user_id}/highlights_tray/`                                                                 |
-| Профиль                 | `GET /api/v1/users/web_profile_info/?username=…`                                                                    |
+| What                   | Request                                                                                                               |
+| ---------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| Post / Reel / carousel | `GET /api/v1/media/{media_id}/info/` → `items[0]`                                                                     |
+| A user's stories       | `GET /api/v1/feed/reels_media/?reel_ids={user_id}` → `reels_media[0].items`, author in `reels_media[0].user.username` |
+| Highlight              | the same with `reel_ids=highlight:{id}`                                                                               |
+| List of highlights     | `GET /api/v1/highlights/{user_id}/highlights_tray/`                                                                   |
+| Profile                | `GET /api/v1/users/web_profile_info/?username=…`                                                                      |
 
-Хост: `www.instagram.com/api/v1/…` (gallery-dl) или `i.instagram.com/api/v1/…` (IG Helper, SocialSnag).
+Host: `www.instagram.com/api/v1/…` (gallery-dl) or `i.instagram.com/api/v1/…` (IG Helper, SocialSnag).
 
-**Заголовки:**
+**Headers:**
 
-- **Минимум (SocialSnag):** `x-ig-app-id: 936619743392459` + cookie (`credentials: 'include'`). SocialSnag делает это прямо из service worker: `host_permissions` на `*.instagram.com` даёт доступ к cookie, контекст страницы не нужен.
-- **Полный набор (gallery-dl, IG Helper):**
-  - `X-CSRFToken` — из cookie `csrftoken`
-  - `X-IG-WWW-Claim` — из `sessionStorage['www-claim-v2']` или заголовка ответа `x-ig-set-www-claim`
+- **Minimum (SocialSnag):** `x-ig-app-id: 936619743392459` + cookies (`credentials: 'include'`). SocialSnag does this right from the service worker: `host_permissions` on `*.instagram.com` gives access to the cookies, no page context needed.
+- **Full set (gallery-dl, IG Helper):**
+  - `X-CSRFToken` from the `csrftoken` cookie
+  - `X-IG-WWW-Claim` from `sessionStorage['www-claim-v2']` or the `x-ig-set-www-claim` response header
   - `X-ASBD-ID`
   - `X-Requested-With: XMLHttpRequest`
-- App ID можно не хардкодить, а читать со страницы: регулярка `"APP_ID":"(\d+)"` по `<script type="application/json">` (IG Helper).
+- The App ID doesn't have to be hardcoded, it can be read from the page with the regex `"APP_ID":"(\d+)"` over `<script type="application/json">` (IG Helper).
 
-### GraphQL (хрупкий, для B не используем)
+### GraphQL (fragile, not used for B)
 
-`POST /graphql/query` с `doc_id` — id сохранённого запроса, который Instagram периодически меняет. Сам IG Helper пишет в коде: «may break in the future». Нужны токены `lsd` и `fb_dtsg` из встроенного JSON и пачка служебных полей.
+`POST /graphql/query` with `doc_id`, the id of a persisted query that Instagram changes from time to time. IG Helper itself says in its code: "may break in the future". It needs the `lsd` and `fb_dtsg` tokens from the embedded JSON and a bunch of service fields.
 
-Для C это всё равно полезно: по этим именам мы узнаем ответы страницы.
+For C this is still useful: these names identify the page's responses.
 
-| `fb_api_req_friendly_name`                | Корневое поле ответа                         |
+| `fb_api_req_friendly_name`                | Root field of the response                   |
 | ----------------------------------------- | -------------------------------------------- |
 | `PolarisPostRootQuery`                    | `xdt_api__v1__media__shortcode__web_info`    |
 | `PolarisStoriesV3ReelPageStandaloneQuery` | `xdt_api__v1__feed__reels_media`             |
 | `PolarisStoriesV3HighlightsPageQuery`     | `xdt_api__v1__feed__reels_media__connection` |
 
-### Ошибки
+### Errors
 
-- Редирект на `/accounts/login/` — нужна авторизация. Редирект на `/challenge/` — проверка на бота, сразу прекращаем запросы.
-- `401`/`403` — нужна авторизация, `404` — нет доступа или пост удалён, `429` — превышен лимит (так классифицирует SocialSnag).
+- A redirect to `/accounts/login/` means login is needed. A redirect to `/challenge/` is a bot check: stop requests immediately.
+- `401`/`403` login needed, `404` no access or the post was deleted, `429` rate limit exceeded (SocialSnag's classification).
 
-### Лимиты
+### Limits
 
-- gallery-dl делает паузу **6–12 секунд** между запросами к API.
-- IG Helper прямо предупреждает: активное использование Media API ведёт к предупреждениям, разлогину и банам.
-- **Наша политика для B:** запрос только по клику пользователя и только при промахе кэша, минимальный интервал между запросами, при `429` или `/challenge/` — пауза. Массовых выгрузок нет.
-
----
-
-## DOM (запасной путь A и привязка кнопок)
-
-- Классы обфусцированы и меняются, на них не опираемся. Стабильные якоря: ссылки `a[href^="/p/"]`, `a[href^="/reel/"]`, теги `article`, `video`, `img[srcset]`.
-- `srcset`: IG Helper берёт первый элемент. Это нужно проверить: по стандарту порядок не гарантирован, надёжнее брать максимальный `w`.
-- Известная проблема IG Helper: React перерисовывает компоненты и удаляет внедрённые кнопки (особенно на новой странице Reels). Значит, кнопки нужно пере-вставлять через MutationObserver, а обработчики кликов вешать делегированием на `body`, как и делает IG Helper.
+- gallery-dl pauses **6–12 seconds** between API requests.
+- IG Helper warns directly that active use of the Media API leads to warnings, logouts and bans.
+- **Our policy for B:** a request only on the user's click and only on a cache miss, a minimum interval between requests, a pause after `429` or `/challenge/`. No bulk downloads.
 
 ---
 
-## Архитектурные находки SocialSnag (MV3, в Chrome Web Store)
+## DOM (fallback A and attaching buttons)
 
-- Запросы к API делаются из **background service worker**, а content script только определяет, что именно скачивать.
-- **Offscreen document** нужен для того, чего нет в service worker: сборки ZIP, буфера обмена. Нам он пригодится для склейки DASH через Mediabunny.
-- **Кэш результатов** (`resolve-cache.js`) защищает от повторных запросов по тому же шорткоду.
-- **Чистые функции разбора** вынесены отдельно и покрыты тестами (vitest) на сохранённых JSON. Возьмём этот подход.
-- Опубликован в сторе с YouTube **только для превью** (`img.youtube.com/vi/<id>/maxresdefault.jpg`, аватарки `yt3.ggpht.com` с `=s0`), это пригодится для этапа 2.
+- Classes are obfuscated and change, so they aren't relied on. Stable anchors: the links `a[href^="/p/"]`, `a[href^="/reel/"]`, the tags `article`, `video`, `img[srcset]`.
+- `srcset`: IG Helper takes the first item. This needs checking: the standard doesn't guarantee the order, taking the largest `w` is more reliable.
+- A known IG Helper problem: React re-renders components and removes injected buttons (especially on the new Reels page). So buttons have to be re-inserted with a MutationObserver, and click handlers delegated to `body`, as IG Helper does.
 
 ---
 
-## Результаты задачи 1.2 — проверка на живом Instagram (2026-11-02)
+## SocialSnag's architecture (MV3, in the Chrome Web Store)
 
-Проверено во встроенном браузере с залогиненным аккаунтом: временный перехватчик `fetch`/`XHR` ставился из консоли, затем изучались ответы и встроенный JSON.
+- API requests are made from the **background service worker**, while the content script only decides what to download.
+- An **offscreen document** is needed for what the service worker lacks: building ZIPs, the clipboard. We'll use it for muxing DASH with Mediabunny.
+- A **result cache** (`resolve-cache.js`) protects against repeated requests for the same shortcode.
+- **Pure parsing functions** are kept separate and covered by tests (vitest) on saved JSON. We'll take this approach.
+- It's published in the store with YouTube support **for thumbnails only** (`img.youtube.com/vi/<id>/maxresdefault.jpg`, avatars `yt3.ggpht.com` with `=s0`), which will be useful for stage 2.
 
-### Способ C подтверждён ✅
+---
 
-**1. Транспорт: только `XMLHttpRequest`.** Все запросы с медиа идут через XHR, через `fetch` не пришло ни одного. Перехватывать нужно оба, но главный — XHR. Эндпоинты: `/graphql/query`, `/api/graphql` и REST `/api/v1/…`.
+## Results of task 1.2: checking live Instagram (2026-11-02)
 
-**2. Встроенный JSON есть.** При прямой загрузке страницы данные лежат в `<script type="application/json" data-sjs>` по пути `require[…].__bbox.require[…].__bbox.result.data.<root>`. Рекурсивный поиск находит их без знания точного пути. Проверено на `/p/<code>/` (поле `xdt_api__v1__media__shortcode__web_info`) и на главной (первая страница ленты, `xdt_api__v1__feed__timeline__connection`).
+Checked in the built-in browser with a logged-in account: a temporary `fetch`/`XHR` interceptor was installed from the console, then responses and the embedded JSON were studied.
 
-**3. Карта страниц:**
+### Method C confirmed ✅
 
-| Страница                    | Как приходит                                                                                                     | `fb_api_req_friendly_name`                                 | Корневое поле                                                                                                                              |
-| --------------------------- | ---------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| Лента, первая страница      | встроенный JSON                                                                                                  | —                                                          | `xdt_api__v1__feed__timeline__connection`                                                                                                  |
-| Лента, подгрузка            | XHR `/graphql/query`                                                                                             | `PolarisFeedRootPaginationCachedQuery_subscribe`           | `xdt_api__v1__feed__timeline__connection` → `edges[].node.media` (а также `node.explore_story.media`, рекламные посты — `node.ad.items[]`) |
-| Пост по прямой ссылке       | встроенный JSON                                                                                                  | —                                                          | `xdt_api__v1__media__shortcode__web_info.items[0]`                                                                                         |
-| Пост, открытый кликом (SPA) | XHR **REST**                                                                                                     | —                                                          | `/api/v1/media/{pk}/info/` → `items[0]`                                                                                                    |
-| Сетка профиля               | XHR `/api/graphql`                                                                                               | `PolarisProfilePostsQuery`                                 | `xdt_api__v1__feed__user_timeline_graphql_connection`                                                                                      |
-| Reels                       | XHR `/api/graphql`                                                                                               | `PolarisClipsTabDesktopContainerQuery`, `…PaginationQuery` | `xdt_api__v1__clips__home__connection_v2`                                                                                                  |
-| Сторис                      | XHR `/graphql/query`                                                                                             | `PolarisStoriesV3ReelPageGalleryQuery`, `…PaginationQuery` | `xdt_api__v1__feed__reels_media__connection` → `edges[].node.items[]`                                                                      |
-| Хайлайты                    | не проверено (чтобы не оставлять лишних просмотров), по IG Helper — `xdt_api__v1__feed__reels_media__connection` |                                                            |                                                                                                                                            |
+**1. Transport: `XMLHttpRequest` only.** All requests with media go through XHR, not a single one came through `fetch`. Both need intercepting, but XHR is the main one. Endpoints: `/graphql/query`, `/api/graphql` and REST `/api/v1/…`.
 
-Сам Instagram при открытии поста кликом ходит в REST `/api/v1/media/{pk}/info/`. Значит, наш запасной запрос туда же выглядит как обычный трафик сайта.
+**2. There is embedded JSON.** On a direct page load the data sits in `<script type="application/json" data-sjs>` at `require[…].__bbox.require[…].__bbox.result.data.<root>`. A recursive search finds it without knowing the exact path. Checked on `/p/<code>/` (the `xdt_api__v1__media__shortcode__web_info` field) and on the home page (first page of the feed, `xdt_api__v1__feed__timeline__connection`).
 
-**4. Структура совпадает с REST:** `pk` (строка), `id` = `<pk>_<user_id>`, `code`, `media_type` (1/2/8), `user.username`, `taken_at`, `original_width`/`original_height`, `image_versions2.candidates`, `video_versions`, `video_dash_manifest`, `carousel_media[]`. Один парсер подходит для всех источников.
+**3. Page map:**
 
-**5. Карусели в ленте приходят целиком:** `carousel_media.length === carousel_media_count` (видели 8 и 13 слайдов). Листать не нужно.
+| Page                       | How it arrives                                                                                          | `fb_api_req_friendly_name`                                 | Root field                                                                                                                   |
+| -------------------------- | ------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| Feed, first page           | embedded JSON                                                                                           | —                                                          | `xdt_api__v1__feed__timeline__connection`                                                                                    |
+| Feed, loading more         | XHR `/graphql/query`                                                                                    | `PolarisFeedRootPaginationCachedQuery_subscribe`           | `xdt_api__v1__feed__timeline__connection` → `edges[].node.media` (also `node.explore_story.media`, ads in `node.ad.items[]`) |
+| Post by direct link        | embedded JSON                                                                                           | —                                                          | `xdt_api__v1__media__shortcode__web_info.items[0]`                                                                           |
+| Post opened by click (SPA) | XHR **REST**                                                                                            | —                                                          | `/api/v1/media/{pk}/info/` → `items[0]`                                                                                      |
+| Profile grid               | XHR `/api/graphql`                                                                                      | `PolarisProfilePostsQuery`                                 | `xdt_api__v1__feed__user_timeline_graphql_connection`                                                                        |
+| Reels                      | XHR `/api/graphql`                                                                                      | `PolarisClipsTabDesktopContainerQuery`, `…PaginationQuery` | `xdt_api__v1__clips__home__connection_v2`                                                                                    |
+| Stories                    | XHR `/graphql/query`                                                                                    | `PolarisStoriesV3ReelPageGalleryQuery`, `…PaginationQuery` | `xdt_api__v1__feed__reels_media__connection` → `edges[].node.items[]`                                                        |
+| Highlights                 | not checked (to avoid leaving extra views); per IG Helper, `xdt_api__v1__feed__reels_media__connection` |                                                            |                                                                                                                              |
 
-### Качество — важные открытия ⚠️
+Instagram itself calls REST `/api/v1/media/{pk}/info/` when a post is opened by click. So our fallback request there looks like the site's regular traffic.
 
-**6. Видео: DASH обязателен.**
+**4. The structure matches REST:** `pk` (a string), `id` = `<pk>_<user_id>`, `code`, `media_type` (1/2/8), `user.username`, `taken_at`, `original_width`/`original_height`, `image_versions2.candidates`, `video_versions`, `video_dash_manifest`, `carousel_media[]`. One parser fits all sources.
 
-- Прогрессивные `video_versions` почти всегда ограничены **720p** (720×1280 или 1280×720), даже когда оригинал 1440×2560.
-- В DASH-манифесте есть 1080p и 1440p: например, `video_versions` 720×1280, а DASH до 1440×2560.
-- В Reels и сторис у `video_versions` **нет полей `width`/`height`**, сортировать по ним нельзя.
+**5. Feed carousels arrive whole:** `carousel_media.length === carousel_media_count` (seen with 8 and 13 slides). No need to swipe.
 
-Вывод: для нормального качества видео нужна склейка DASH (задача 1.4b). Прогрессивный mp4 оставляем только как быстрый запасной вариант.
+### Quality: important findings ⚠️
 
-**7. Фото: максимальное разрешение зависит от источника.**
+**6. Video: DASH is a must.**
 
-| Источник                                             | Кандидаты | Максимум (пример: оригинал 3000×4000)              |
-| ---------------------------------------------------- | --------- | -------------------------------------------------- |
-| Лента (`feed__timeline`)                             | 2 шт.     | 1080×1440 (`stp=…_p1080x1080_…`)                   |
-| REST `/api/v1/media/{pk}/info/`                      | 2 шт.     | 1080×1440                                          |
-| Пост по прямой ссылке (`media__shortcode__web_info`) | ~14 шт.   | **3000×4000** (`stp=dst-jpg_e35_tt6`, без ресайза) |
-| Сетка профиля (`user_timeline_graphql_connection`)   | много     | **3000**                                           |
-| Сторис                                               | 1–2 шт.   | равно оригиналу (обычно 1080×1920)                 |
+- Progressive `video_versions` are almost always limited to **720p** (720×1280 or 1280×720), even when the original is 1440×2560.
+- The DASH manifest has 1080p and 1440p: e.g. `video_versions` at 720×1280 while DASH goes up to 1440×2560.
+- In Reels and stories `video_versions` have **no `width`/`height` fields**, so they can't be sorted by them.
 
-- Короткий `stp` без `p1080x1080`/`s640x640` действительно означает оригинал, правило IG Helper работает.
-- Обычный `fetch('/p/<code>/')` HTML **не** содержит данных медиа: встроенный JSON приходит только при настоящей навигации.
-- **Следствие:** для фото из ленты оригинал больше 1080 через C и REST не получить. Варианты на будущее (задача 1.5):
-  - (а) GraphQL `PolarisPostRootQuery`. Перехватчик видит запросы самой страницы, поэтому может узнать актуальный `doc_id` и токены `lsd`/`fb_dtsg` из её трафика, а не хардкодить их. Не проверено.
-  - (б) Смириться с 1080 для ленты и брать оригинал, если пост открыт по ссылке или из профиля.
-  - Большинство постов и так загружаются не больше 1080–1440, так что проблема касается только фото, загруженных в высоком разрешении.
+Conclusion: decent video quality needs DASH muxing (task 1.4b). The progressive mp4 stays only as a quick fallback.
+
+**7. Photos: the maximum resolution depends on the source.**
+
+| Source                                             | Candidates | Maximum (example: 3000×4000 original)            |
+| -------------------------------------------------- | ---------- | ------------------------------------------------ |
+| Feed (`feed__timeline`)                            | 2          | 1080×1440 (`stp=…_p1080x1080_…`)                 |
+| REST `/api/v1/media/{pk}/info/`                    | 2          | 1080×1440                                        |
+| Post by direct link (`media__shortcode__web_info`) | ~14        | **3000×4000** (`stp=dst-jpg_e35_tt6`, no resize) |
+| Profile grid (`user_timeline_graphql_connection`)  | many       | **3000**                                         |
+| Stories                                            | 1–2        | equal to the original (usually 1080×1920)        |
+
+- A short `stp` without `p1080x1080`/`s640x640` does mean the original; IG Helper's rule works.
+- A plain `fetch('/p/<code>/')` HTML does **not** contain media data: the embedded JSON comes only with a real navigation.
+- **Consequence:** for feed photos an original above 1080 can't be obtained through C or REST. Options for the future (task 1.5):
+  - (a) GraphQL `PolarisPostRootQuery`. The interceptor sees the page's own requests, so it could learn the current `doc_id` and the `lsd`/`fb_dtsg` tokens from its traffic instead of hardcoding them. Not checked.
+  - (b) Accept 1080 for the feed and take the original when the post is opened by link or from the profile.
+  - Most posts are uploaded at no more than 1080–1440 anyway, so the problem only concerns photos uploaded in high resolution.
 
 ### DOM
 
-- В ленте у `<img>` **нет `srcset`**, только `src` (1080px). Вариант A с `srcset` устарел, берём `src`/`currentSrc`.
-- Посты — это `<article>`, внутри есть стабильная ссылка `a[href^="/p/<code>/"]`, по ней сопоставляем пост с данными.
-- URL сторис меняется на `/stories/<username>/<pk>/` при переключении: текущий элемент определяем по `pk` из URL.
-- Картинки грузятся с `scontent-*.cdninstagram.com`.
+- In the feed `<img>` has **no `srcset`**, only `src` (1080px). The `srcset` variant of A is outdated; take `src`/`currentSrc`.
+- Posts are `<article>` elements with a stable `a[href^="/p/<code>/"]` link inside, used to match the post with its data.
+- The story URL changes to `/stories/<username>/<pk>/` on switching: the current item is identified by the `pk` from the URL.
+- Images load from `scontent-*.cdninstagram.com`.

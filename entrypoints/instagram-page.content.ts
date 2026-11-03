@@ -2,9 +2,9 @@ import { PAGE_CHANNEL, type PagePostsMessage } from '@/lib/core/messages';
 import { installInterceptor, watchInlineData } from '@/lib/page/interceptor';
 import { instagramPageParser } from '@/lib/sites/instagram/parse';
 
-// Работает в контексте страницы (MAIN world) с самого начала загрузки, чтобы успеть
-// подменить XHR/fetch раньше кода Instagram. Здесь нет доступа к API расширения:
-// найденные посты передаются content script через window.postMessage.
+// Runs in the page context (MAIN world) from the very start of loading, to patch
+// XHR/fetch before Instagram's code does. There is no extension API here:
+// found posts are passed to the content script via window.postMessage.
 export default defineContentScript({
   matches: ['*://*.instagram.com/*'],
   world: 'MAIN',
@@ -16,7 +16,7 @@ export default defineContentScript({
     };
 
     installInterceptor(instagramPageParser, emit);
-    // Без кавычек: в данных, вложенных строкой, кавычки экранированы
+    // No quotes: in data nested as a string the quotes are escaped
     watchInlineData(instagramPageParser, emit, 'image_versions2');
   },
 });

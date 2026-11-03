@@ -1,64 +1,64 @@
 # Media Saver
 
-Расширение для Chrome: скачивание медиа из соцсетей одним кликом. План работ — в [ROADMAP.md](ROADMAP.md), заметки по Instagram — в [docs/instagram.md](docs/instagram.md).
+A Chrome extension that downloads media from social networks in one click. The work plan is in [ROADMAP.md](ROADMAP.md), Instagram notes are in [docs/instagram.md](docs/instagram.md).
 
-## Что умеет
+## Features
 
-Кнопка ⬇ встраивается в родную панель действий поста; то же — в подменю «Media Saver» по правому клику. Интерфейс расширений — на английском.
+A ⬇ button is embedded in the post's native action bar; the same actions are in the "Media Saver" submenu on right-click. The extensions' interface is in English.
 
-| Сайт      | Что скачивает                                                                              |
-| --------- | ------------------------------------------------------------------------------------------ |
-| Instagram | фото, карусели (текущий слайд или «All N»), видео и Reels, сторис, хайлайты, оригинал «HD» |
-| X         | фото в оригинале, видео и GIF                                                              |
-| TikTok    | видео и фото-посты                                                                         |
-| LinkedIn  | фото и видео из постов                                                                     |
+| Site      | What it downloads                                                                                   |
+| --------- | --------------------------------------------------------------------------------------------------- |
+| Instagram | photos, carousels (current slide or "All N"), videos and Reels, stories, highlights, "HD" originals |
+| X         | photos in original size, videos and GIFs                                                            |
+| TikTok    | videos and photo posts                                                                              |
+| LinkedIn  | photos and videos from posts                                                                        |
 
-YouTube — отдельное расширение **Media Saver for YouTube** в этом же репозитории (см. ниже): ему нужен хелпер на компьютере и права, которые Web Store не пропустит.
+YouTube is a separate extension, **Media Saver for YouTube**, in this same repository (see below): it needs a helper on the computer and permissions the Web Store won't accept.
 
-Файлы сохраняются в `Загрузки/<сайт>/<автор>/<id>_<n>.<ext>` (шаблон меняется в настройках).
+Files are saved to `Downloads/<site>/<author>/<id>_<n>.<ext>` (the template can be changed in the settings).
 
-## Как устроено
+## How it works
 
-- `entrypoints/<сайт>-page.content.ts` — скрипт в контексте страницы (MAIN world): перехватывает данные, которые сайт и так получает (XHR/fetch, встроенный JSON), и передаёт их content script.
-- `entrypoints/<сайт>.content.ts` — кнопки на странице, выбор, что скачать. Общие части — в `lib/content/` и `lib/ui/`.
-- `entrypoints/background.ts` + `lib/background/` — скачивание через `chrome.downloads`, контекстное меню, оригиналы через фоновую вкладку, yt-dlp.
-- `entrypoints/offscreen/` — склейка видео и звука DASH (Instagram) и сохранение байтов, скачанных страницей (TikTok).
-- `lib/sites/<сайт>/` — разбор данных сайта, покрыт тестами.
+- `entrypoints/<site>-page.content.ts`: a script in the page context (MAIN world). It intercepts the data the site receives anyway (XHR/fetch, embedded JSON) and passes it to the content script.
+- `entrypoints/<site>.content.ts`: buttons on the page and choosing what to download. Shared parts are in `lib/content/` and `lib/ui/`.
+- `entrypoints/background.ts` + `lib/background/`: downloading through `chrome.downloads`, the context menu, originals through a background tab, yt-dlp.
+- `entrypoints/offscreen/`: muxing DASH video and audio (Instagram) and saving bytes downloaded by the page (TikTok).
+- `lib/sites/<site>/`: parsing the site's data, covered by tests.
 
-## Разработка
+## Development
 
 ```bash
 npm install
-npm run dev      # сборка в .output/chrome-mv3-dev с горячей перезагрузкой
-npm run build    # сборка в .output/chrome-mv3
-npm run compile  # проверка типов
-npm test         # тесты (vitest)
+npm run dev      # build into .output/chrome-mv3-dev with hot reload
+npm run build    # build into .output/chrome-mv3
+npm run compile  # type check
+npm test         # tests (vitest)
 npm run lint
 npm run format
 ```
 
-### Подключение dev-сборки (один раз)
+### Loading the dev build (once)
 
-1. Запустить `npm run dev` и не закрывать.
-2. В обычном Chrome открыть `chrome://extensions`, включить «Режим разработчика».
-3. «Загрузить распакованное расширение» → папка `.output/chrome-mv3-dev`.
+1. Run `npm run dev` and keep it running.
+2. In regular Chrome open `chrome://extensions` and turn on "Developer mode".
+3. "Load unpacked" → the `.output/chrome-mv3-dev` folder.
 
-Дальше изменения в коде подхватываются сами, пока работает `npm run dev`.
+After that, code changes are picked up automatically while `npm run dev` is running.
 
 ## Media Saver for YouTube
 
-Отдельное расширение: кнопки «Video» и «Thumbnail» под роликом и в Shorts, превью из любой ленты — по правому клику. Код — `apps/youtube/` и общий `lib/`, конфиг — `wxt.youtube.config.ts`.
+A separate extension: "Video" and "Thumbnail" buttons under the video and in Shorts, thumbnails from any feed on right-click. The code is in `apps/youtube/` plus the shared `lib/`, the config is `wxt.youtube.config.ts`.
 
 ```bash
-npm run dev:youtube    # .output/youtube/chrome-mv3-dev, можно параллельно с npm run dev
+npm run dev:youtube    # .output/youtube/chrome-mv3-dev, can run alongside npm run dev
 npm run build:youtube  # .output/youtube/chrome-mv3
 ```
 
-Подключается так же, как основное: «Загрузить распакованное расширение» → папка сборки.
+It is loaded the same way as the main one: "Load unpacked" → the build folder.
 
-### Хелпер yt-dlp (один раз)
+### The yt-dlp helper (once)
 
-Видео с YouTube качает [yt-dlp](https://github.com/yt-dlp/yt-dlp) на компьютере, расширение передаёт ему ссылку через Native Messaging (`native-host/`). Превью работают и без этого.
+YouTube videos are downloaded by [yt-dlp](https://github.com/yt-dlp/yt-dlp) on the computer; the extension hands it the link through Native Messaging (`native-host/`). Thumbnails work without it.
 
 ```powershell
 winget install yt-dlp.yt-dlp
@@ -66,20 +66,24 @@ winget install Gyan.FFmpeg
 powershell -ExecutionPolicy Bypass -File native-host\install.ps1
 ```
 
-`install.ps1` регистрирует хелпер для Chrome в реестре текущего пользователя (без прав администратора) и записывает точные пути к `node`, `yt-dlp` и `ffmpeg` (`host-run.bat`, `host-config.json`): Chrome запускает хелпер со своим PATH, который может быть старше установки yt-dlp. Если переустановили или обновили эти программы через winget и путь поменялся — запустите `install.ps1` ещё раз. Удалить регистрацию: `install.ps1 -Uninstall`.
+`install.ps1` registers the helper for Chrome in the current user's registry (no admin rights needed) and records the exact paths to `node`, `yt-dlp` and `ffmpeg` (`host-run.bat`, `host-config.json`): Chrome starts the helper with its own PATH, which may predate the yt-dlp install. If you reinstalled or updated these programs through winget and the path changed, run `install.ps1` again. To remove the registration: `install.ps1 -Uninstall`.
 
-Видео сохраняются в `Загрузки\youtube\<канал>\<название> [id].mp4`. Качество выбирается в меню по правому клику: «Media Saver for YouTube ▸ Video: …». Если YouTube начнёт отдавать ошибки про PO Token — обновите yt-dlp (`winget upgrade yt-dlp.yt-dlp`) и при необходимости поставьте плагин [bgutil-ytdlp-pot-provider](https://github.com/yt-dlp/yt-dlp/wiki/PO-Token-Guide).
+Videos are saved to `Downloads\youtube\<channel>\<title> [id].mp4`. Quality is chosen in the right-click menu: "Media Saver for YouTube ▸ Video: …". If YouTube starts returning PO Token errors, update yt-dlp (`winget upgrade yt-dlp.yt-dlp`) and, if needed, install the [bgutil-ytdlp-pot-provider](https://github.com/yt-dlp/yt-dlp/wiki/PO-Token-Guide) plugin.
 
-## Установка для постоянного использования
+## Installing for everyday use
 
 ```bash
 npm run pack
 ```
 
-Собирает оба расширения в постоянные папки `release/media-saver` и `release/media-saver-youtube`. Один раз: удалить dev-версии в `chrome://extensions` (у них тот же id), включить «Режим разработчика», «Загрузить распакованное расширение» → эти папки. Дальше после каждого `npm run pack` достаточно нажать ⟳ у расширения. Перед обновлением стоит пройтись по [чек-листу](docs/checklist.md).
+Builds both extensions into the permanent folders `release/media-saver` and `release/media-saver-youtube`. Once: remove the dev versions in `chrome://extensions` (they have the same id), turn on "Developer mode", "Load unpacked" → these folders. After that, each `npm run pack` only needs a ⟳ on the extension. Before updating, it's worth going through the [checklist](docs/checklist.md).
 
-Иконки рисуются из `icons/` (`icon.png` для Media Saver, `icon-youtube.png` для YouTube) командой `npm run icons`.
+Icons are rendered from `icons/` (`icon.png` for Media Saver, `icon-youtube.png` for YouTube) with `npm run icons`.
 
-## Публикация в Chrome Web Store
+## Publishing to the Chrome Web Store
 
-`npm run zip:store` собирает архив Media Saver без поля `key`. Тексты для карточки, обоснование разрешений и порядок действий — в [docs/store.md](docs/store.md), политика конфиденциальности — [docs/privacy.md](docs/privacy.md).
+`npm run zip:store` builds a Media Saver archive without the `key` field. The listing texts, permission justifications and the steps are in [docs/store.md](docs/store.md), the privacy policy is [docs/privacy.md](docs/privacy.md).
+
+## License
+
+[MIT](LICENSE)

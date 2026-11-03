@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { parseTikTok, pickVideo } from './parse';
 
-// Структура как в `__UNIVERSAL_DATA_FOR_REHYDRATION__` и `/api/…/item_list/`, значения выдуманы
+// Structure as in `__UNIVERSAL_DATA_FOR_REHYDRATION__` and `/api/…/item_list/`, the values are made up
 const bitrate = (codec: string, w: number, h: number, bitrate: number, host: string) => ({
   Bitrate: bitrate,
   CodecType: codec,
@@ -50,7 +50,7 @@ const photo = {
 };
 
 describe('parseTikTok', () => {
-  it('ролик со страницы: лучшее качество и H.264 для совместимости', () => {
+  it('video from the page: best quality and H.264 for compatibility', () => {
     const inline = {
       __DEFAULT_SCOPE__: { 'webapp.video-detail': { itemInfo: { itemStruct: video } } },
     };
@@ -72,7 +72,7 @@ describe('parseTikTok', () => {
     });
   });
 
-  it('фото-пост из ленты: все картинки', () => {
+  it('photo post from the feed: all images', () => {
     const [post] = parseTikTok({ itemList: [photo] });
     expect(post!.permalink).toBe('https://www.tiktok.com/@artist/photo/7700000000000000001');
     expect(post!.items.map((i) => [i.kind, i.index, i.ext])).toEqual([
@@ -83,7 +83,7 @@ describe('parseTikTok', () => {
 });
 
 describe('pickVideo', () => {
-  it('без H.264 совместимого варианта нет', () => {
+  it('without H.264 there is no compatible variant', () => {
     expect(pickVideo([bitrate('h265_hvc1', 720, 1280, 1, 'h')]).compatible).toBeUndefined();
   });
 });

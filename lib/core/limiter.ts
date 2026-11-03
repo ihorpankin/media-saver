@@ -1,6 +1,6 @@
 /**
- * Ограничивает число одновременно выполняемых задач.
- * Задачи сверх лимита ждут своей очереди в порядке поступления.
+ * Limits the number of tasks running at the same time.
+ * Tasks over the limit wait their turn in arrival order.
  */
 export function createLimiter(concurrency: number) {
   let active = 0;

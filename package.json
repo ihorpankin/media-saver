@@ -1,6 +1,6 @@
 {
   "name": "media-saver",
-  "description": "Скачивание медиа из соцсетей одним кликом",
+  "description": "Download photos and videos from social networks in one click",
   "private": true,
   "license": "MIT",
   "version": "1.0.0",

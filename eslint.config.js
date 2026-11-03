@@ -5,12 +5,12 @@ export default tseslint.config(
   { ignores: ['.output/', '.wxt/', 'node_modules/', 'release/'] },
   js.configs.recommended,
   ...tseslint.configs.recommended,
-  // Хелпер yt-dlp работает в Node, а не в браузере
+  // The yt-dlp helper runs in Node, not in the browser
   {
     files: ['native-host/**/*.mjs'],
     languageOptions: { globals: { process: 'readonly', Buffer: 'readonly' } },
   },
-  // Скрипты сборки (npm run pack, npm run icons) — тоже Node
+  // Build scripts (npm run pack, npm run icons) are Node too
   {
     files: ['scripts/**/*.mjs'],
     languageOptions: { globals: { console: 'readonly', process: 'readonly' } },

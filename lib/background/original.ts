@@ -3,23 +3,23 @@ import type { DownloadResponse, OriginalRequest } from '@/lib/core/messages';
 import { handleDownload } from './downloader';
 
 /*
- * «Скачать оригинал». В ленте и в REST-ответе фото обрезаны до 1080px, а полный список
- * размеров приходит только во встроенном JSON страницы поста. Поэтому открываем пост
- * в неактивной вкладке — это обычная навигация, как если бы пользователь открыл ссылку, —
- * content script там отдаёт данные поста, а вкладку закрываем.
+ * "Download original". In the feed and in the REST response photos are cut to 1080px, and the full list
+ * of sizes comes only in the post page's embedded JSON. So the post is opened
+ * in an inactive tab (a regular navigation, as if the user opened the link),
+ * the content script there hands over the post data, and the tab is closed.
  */
 
 const TIMEOUT_MS = 20_000;
 
-/** Фоновые вкладки, которые ждут данные: id вкладки → шорткод и обработчик. */
+/** Background tabs waiting for data: tab id → shortcode and handler. */
 const pending = new Map<number, { postId: string; resolve: (post: MediaPost) => void }>();
 
-/** Шорткод поста, если вкладка открыта ради оригинала. */
+/** The post shortcode, if the tab was opened for an original. */
 export function harvestTarget(tabId: number | undefined): string | undefined {
   return tabId === undefined ? undefined : pending.get(tabId)?.postId;
 }
 
-/** Данные от фоновой вкладки. */
+/** Data from the background tab. */
 export function harvestResult(tabId: number | undefined, post: MediaPost) {
   if (tabId !== undefined) pending.get(tabId)?.resolve(post);
 }
@@ -50,12 +50,12 @@ async function fetchFullPost(postId: string): Promise<MediaPost> {
   }
 }
 
-/** Скачивает элемент поста в оригинальном размере. */
+/** Downloads a post item at original size. */
 export async function handleOriginal({ post, index }: OriginalRequest): Promise<DownloadResponse> {
   const full = await fetchFullPost(post.postId);
   const item = full.items.find((i) => i.index === index);
   if (!item) return { completed: 0, errors: [{ index, error: 'no such slide in the post' }] };
-  // Имя файла как у обычного скачивания: автор и число слайдов берём из исходного поста
+  // File name as for a regular download: the author and slide count come from the source post
   return handleDownload({
     type: 'download',
     post: { ...post, items: [item], itemCount: post.itemCount ?? post.items.length },

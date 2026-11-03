@@ -1,15 +1,15 @@
 import type { MediaPost } from './media';
 
 /**
- * Разбор данных, которые страница уже получила (способ C).
+ * Parsing data the page has already received (method C).
  *
- * Работает в контексте страницы (MAIN world), поэтому должен быть чистым:
- * никаких `browser.*`/`chrome.*` API и никакого состояния. Так его легко тестировать
- * на сохранённых JSON.
+ * Runs in the page context (MAIN world), so it must be pure:
+ * no `browser.*`/`chrome.*` APIs and no state. This makes it easy to test
+ * on saved JSON.
  */
 export interface PageDataParser {
-  /** Стоит ли разбирать ответ с этого URL. Вызывается на каждый XHR/fetch, поэтому должен быть дешёвым. */
+  /** Whether to parse the response from this URL. Called on every XHR/fetch, so it must be cheap. */
   shouldParse(url: string): boolean;
-  /** Найти все посты в JSON: ответе XHR/fetch или встроенном `<script type="application/json">`. */
+  /** Find all posts in JSON: an XHR/fetch response or an embedded `<script type="application/json">`. */
   parse(json: unknown): MediaPost[];
 }

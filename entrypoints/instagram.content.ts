@@ -17,13 +17,13 @@ import {
   type DownloadButtonOptions,
 } from '@/lib/ui/download-button';
 
-// Данные постов приходят от перехватчика (instagram-page.content.ts) и копятся в кэше.
-// Кнопка встраивается в панели действий Instagram:
-//   - лента и открытый пост: строка «лайк, комментарий, репост, поделиться» → ⬇ и «Все N»;
-//   - Reels: колонка справа от ролика → ⬇ перед «Ещё»;
-//   - сторис: шапка → ⬇ перед паузой.
-// У плиток сеток (профиль, «Ещё от автора», поиск) панели нет — там кнопка поверх превью.
-// Подписи кнопок Instagram переводятся, поэтому панели ищем по структуре, а не по тексту.
+// Post data comes from the interceptor (instagram-page.content.ts) and piles up in the cache.
+// The button is embedded in Instagram's action bars:
+//   - feed and opened post: the "like, comment, repost, share" row → ⬇ and "All N";
+//   - Reels: the column to the right of the video → ⬇ before "More";
+//   - stories: the header → ⬇ before pause.
+// Grid tiles (profile, "More from", search) have no bar, so the button sits over the preview.
+// Instagram's button labels are translated, so bars are found by structure, not by text.
 
 const cache = createPostCache();
 
@@ -33,11 +33,11 @@ function shortcodeFromHref(href: string | null | undefined): string | undefined 
   return href?.match(POST_LINK)?.[1];
 }
 
-// ---- Медиа и слайды ----
+// ---- Media and slides ----
 
 /**
- * Крупное медиа по размеру на экране: аватарки и иконки меньше 100px. По natural-размеру
- * судить нельзя — превью в Explore всего 240px в ширину, хотя на экране занимают 320px.
+ * Large media by on-screen size: avatars and icons are smaller than 100px. The natural size
+ * can't be used: Explore previews are only 240px wide but take 320px on screen.
  */
 function isLargeMedia(el: HTMLImageElement | HTMLVideoElement): boolean {
   const r = el.getBoundingClientRect();
@@ -48,7 +48,7 @@ function isLargeMedia(el: HTMLImageElement | HTMLVideoElement): boolean {
   );
 }
 
-/** Загруженные крупные фото и видео (аватарки и иконки отсекаем по размеру). */
+/** Loaded large photos and videos (avatars and icons are filtered out by size). */
 function largeMedia(root: ParentNode): HTMLElement[] {
   return [...root.querySelectorAll<HTMLImageElement | HTMLVideoElement>('img, video')].filter(
     isLargeMedia,
@@ -65,9 +65,9 @@ function visibleArea(el: Element, view: DOMRect): number {
 const viewport = () => new DOMRect(0, 0, innerWidth, innerHeight);
 
 /**
- * Самое заметное медиа поста внутри root. Превью других постов («Ещё от автора», соседние
- * сторис) лежат внутри ссылок на них — их пропускаем. Но и сам пост может быть внутри ссылки:
- * видео в ленте обёрнуто в ссылку на свой же Reels, поэтому ссылку на `ownId` не считаем чужой.
+ * The most prominent media of the post inside root. Previews of other posts ("More from",
+ * neighboring stories) sit inside links to them and are skipped. But the post itself can be in a link:
+ * a feed video is wrapped in a link to its own Reel, so a link to `ownId` doesn't count as foreign.
  */
 function mainMedia(root: ParentNode, ownId?: string): HTMLElement | undefined {
   const view = viewport();
@@ -82,8 +82,8 @@ function mainMedia(root: ParentNode, ownId?: string): HTMLElement | undefined {
 }
 
 /**
- * Блок медиа: самый верхний предок того же размера, что и само фото или видео.
- * В нём лежит и карусель целиком, и прозрачный слой, которым Instagram накрывает медиа.
+ * Media block: the topmost ancestor with the same size as the photo or video itself.
+ * It holds the whole carousel and the transparent layer Instagram puts over the media.
  */
 function mediaBox(media: HTMLElement, stop: Element): HTMLElement {
   const target = media.getBoundingClientRect();
@@ -101,22 +101,22 @@ function translateX(el: Element): number {
 
 interface Slide {
   media: HTMLElement;
-  /** Номер слайда, с 1. */
+  /** Slide number, from 1. */
   index: number;
-  /** Всего слайдов, если удалось определить по разметке. */
+  /** Total slides, if the markup tells. */
   total?: number;
 }
 
 /**
- * Видимый слайд поста. Слайды карусели — это `li` со сдвигом translateX(номер × ширина),
- * а последний служебный `li` шириной 1px стоит на позиции «всего слайдов × ширина».
+ * The visible slide of the post. Carousel slides are `li` shifted by translateX(number × width),
+ * and the last service `li`, 1px wide, sits at "total slides × width".
  */
 function visibleSlide(root: Element, ownId?: string): Slide | undefined {
   const first = mainMedia(root, ownId);
   if (!first) return undefined;
   const box = mediaBox(first, root);
   const view = box.getBoundingClientRect();
-  // Под видео часто лежит картинка-обложка того же размера: при равной площади видео важнее
+  // A cover image of the same size often lies under a video: with equal area the video wins
   const isVideo = (el: HTMLElement) => Number(el instanceof HTMLVideoElement);
   const media = largeMedia(box).sort(
     (a, b) => visibleArea(b, view) - visibleArea(a, view) || isVideo(b) - isVideo(a),
@@ -135,7 +135,7 @@ function visibleSlide(root: Element, ownId?: string): Slide | undefined {
   };
 }
 
-/** Имя файла картинки на CDN: одинаковое во всех размерах, по нему узнаём медиа в кэше. */
+/** Image file name on the CDN: the same in all sizes, used to find the media in the cache. */
 function cdnFileName(url: string): string | undefined {
   try {
     return new URL(url).pathname.split('/').pop();
@@ -144,7 +144,7 @@ function cdnFileName(url: string): string | undefined {
   }
 }
 
-/** Пост в кэше, где есть эта картинка. Нужен, когда в адресе нет id (первая сторис автора). */
+/** The cached post containing this image. Needed when the URL has no id (author's first story). */
 function postByImage(media: HTMLElement): MediaPost | undefined {
   if (!(media instanceof HTMLImageElement)) return undefined;
   const name = cdnFileName(media.currentSrc || media.src);
@@ -153,7 +153,7 @@ function postByImage(media: HTMLElement): MediaPost | undefined {
 }
 
 function authorOf(root: Element): string | undefined {
-  // Автор — первая ссылка на профиль, текст которой совпадает с ником
+  // The author is the first profile link whose text matches the username
   return [...root.querySelectorAll('a[href]')]
     .map((a) => ({
       name: a.getAttribute('href')?.match(/^\/([\w.]+)\/$/)?.[1],
@@ -162,7 +162,7 @@ function authorOf(root: Element): string | undefined {
     .find(({ name, text }) => name && text?.trim() === name)?.name;
 }
 
-/** Запасной путь (A): видимое фото прямо из DOM. Видео так не скачать — у него blob-ссылка. */
+/** Fallback (A): the visible photo straight from the DOM. Videos can't be taken this way: they have a blob URL. */
 function postFromDom(
   postId: string,
   slide: Slide & { media: HTMLImageElement },
@@ -185,20 +185,20 @@ function postFromDom(
   };
 }
 
-// ---- Скачивание ----
+// ---- Downloading ----
 
 async function send(request: DownloadRequest | OriginalRequest): Promise<void> {
   const response = await requestDownload(request);
   if (response.completed === 0) throw new Error('this media is not in the post data');
 }
 
-/** Как найти пост, к которому относится кнопка. */
+/** How to find the post the button belongs to. */
 interface PostSource {
-  /** Шорткод или pk сторис, если известен. */
+  /** Shortcode or story pk, if known. */
   postId: () => string | undefined;
-  /** Элемент, внутри которого медиа поста (article, окно поста, вьюер сторис). */
+  /** Element containing the post's media (article, post dialog, story viewer). */
   root: () => Element;
-  /** Последний способ найти пост, если не помогли ни id, ни картинка (видео в хайлайтах). */
+  /** Last way to find the post if neither the id nor the image helped (videos in highlights). */
   fallback?: (slide: Slide) => MediaPost | undefined;
 }
 
@@ -213,8 +213,8 @@ function resolvePost(source: PostSource, slide: Slide | undefined): MediaPost | 
 }
 
 /**
- * Пост из кэша, а если его там нет — одним запросом к API Instagram (запасной путь B).
- * Без id (первая сторис автора, хайлайты) запрашивать нечего.
+ * The post from the cache, or if it isn't there, from one request to Instagram's API (fallback B).
+ * Without an id (author's first story, highlights) there is nothing to request.
  */
 async function loadPost(source: PostSource, slide: Slide | undefined): Promise<MediaPost> {
   const cached = resolvePost(source, slide);
@@ -234,7 +234,7 @@ async function downloadSlide(source: PostSource) {
   try {
     post = await loadPost(source, slide);
   } catch (error) {
-    // Последний рубеж (A): видимое фото прямо со страницы
+    // Last resort (A): the visible photo straight from the page
     const id = source.postId();
     const { media } = slide;
     if (!id || !(media instanceof HTMLImageElement)) throw error;
@@ -250,12 +250,12 @@ async function downloadAll(source: PostSource) {
   await send({ type: 'download', post });
 }
 
-/** Текущий слайд, если у него есть оригинал крупнее того, что пришло в ленту. */
+/** The current slide, if it has an original larger than the one in the feed. */
 function largerOriginal(source: PostSource) {
   const slide = visibleSlide(source.root(), source.postId());
   const post = resolvePost(source, slide);
   const item = slide && post?.items.find((i) => i.index === slide.index);
-  // Оригиналы берутся со страницы поста, а у сторис её нет — там и так полный размер
+  // Originals come from the post page, and stories don't have one; they are full size anyway
   if (!post || !item || !hasLargerOriginal(item) || post.permalink?.includes('/stories/')) {
     return undefined;
   }
@@ -296,11 +296,11 @@ function buttonOptions(source: PostSource, title = 'Download'): DownloadButtonOp
   };
 }
 
-// ---- Поиск панелей действий ----
+// ---- Finding action bars ----
 
 const SVG_BUTTON = '[role="button"]:has(svg), button:has(svg)';
 
-/** Кнопки с иконками. Вложенные кнопки (бывают у «Сохранить») считаем одной. */
+/** Buttons with icons. Nested buttons (Save has them) count as one. */
 function svgButtons(el: Element): Element[] {
   const buttons = [...el.querySelectorAll(SVG_BUTTON)];
   return buttons.filter((b) => !buttons.some((outer) => outer !== b && outer.contains(b)));
@@ -311,8 +311,8 @@ function hasOurButton(el: Element): boolean {
 }
 
 /**
- * Вставляет кнопку в панель. Обёртку берём с классами соседнего элемента панели,
- * чтобы отступы были такими же, как у родных кнопок.
+ * Inserts the button into the bar. The wrapper copies the classes of a neighboring bar element
+ * so the spacing matches the native buttons.
  */
 function insertButton(
   container: Element,
@@ -326,20 +326,20 @@ function insertButton(
   container.insertBefore(wrapper, before);
 }
 
-/** Куда в строке действий вставить кнопку. */
+/** Where in the action row to insert the button. */
 interface RowSlot {
   container: Element;
-  /** Перед каким элементом вставлять (`null` — в конец). */
+  /** Element to insert before (`null` for the end). */
   before: Element | null;
-  /** Соседний элемент, чьи классы берём для отступов. */
+  /** Neighboring element whose classes give the spacing. */
   template: Element;
 }
 
 /**
- * Строка действий поста — `section` с лайком, комментарием, репостом, «поделиться»
- * и «сохранить». Бывает в двух видах:
- *   - лента и страница поста: две группы, слева действия, справа «сохранить» → в конец левой;
- *   - окно поста поверх ленты: все кнопки подряд, «сохранить» последняя → перед ней.
+ * The post's action row: a `section` with like, comment, repost, share
+ * and save. It comes in two forms:
+ *   - feed and post page: two groups, actions on the left, save on the right → end of the left one;
+ *   - post dialog over the feed: all buttons in a row, save last → before it.
  */
 function actionRow(root: ParentNode): RowSlot | undefined {
   for (const section of root.querySelectorAll('section')) {
@@ -374,9 +374,9 @@ function attachToRow(slot: RowSlot, source: PostSource) {
   );
 }
 
-// ---- Места на странице ----
+// ---- Places on the page ----
 
-/** Посты ленты. */
+/** Feed posts. */
 function scanFeed() {
   for (const article of document.querySelectorAll('article')) {
     const postId = shortcodeFromHref(
@@ -389,13 +389,13 @@ function scanFeed() {
 }
 
 /**
- * Открытый пост: отдельная страница или окно поверх ленты и профиля.
- * Адрес бывает `/p/<code>/`, `/reel/<code>/` и, если пост открыт из профиля, `/<user>/p/<code>/`.
+ * An opened post: a separate page or a dialog over the feed and profile.
+ * The URL is `/p/<code>/`, `/reel/<code>/` or, when opened from a profile, `/<user>/p/<code>/`.
  */
 function scanPostPage() {
   if (!/\/(?:p|reel)\/[\w-]+/.test(location.pathname)) return;
   const postId = () => shortcodeFromHref(location.pathname);
-  // Окно поста ищем по строке действий, а не по фото: фото в нём может ещё грузиться
+  // The post dialog is found by its action row, not by the photo: the photo may still be loading
   const root = () =>
     [...document.querySelectorAll('[role="dialog"]')].find((d) => actionRow(d)) ??
     document.querySelector('main') ??
@@ -405,14 +405,14 @@ function scanPostPage() {
 }
 
 /**
- * Reels: справа от каждого ролика колонка «лайк, комментарий, репост, поделиться,
- * сохранить, ещё». Ставим ⬇ перед «ещё».
+ * Reels: to the right of each video, a column "like, comment, repost, share,
+ * save, more". ⬇ goes before "more".
  */
 function scanReels() {
   if (!location.pathname.startsWith('/reels/')) return;
   for (const video of document.querySelectorAll('video')) {
     if (visibleArea(video, viewport()) === 0) continue;
-    // Колонка — сосед одного из предков ролика
+    // The column is a sibling of one of the video's ancestors
     let column: Element | undefined;
     for (let el = video.parentElement; el && !column; el = el.parentElement) {
       column = [...(el.parentElement?.children ?? [])].find(
@@ -434,7 +434,7 @@ function scanReels() {
       createInlineButton(
         'column',
         buttonOptions({
-          // Ролик в колонке — тот, что сейчас в адресе: Instagram меняет URL при прокрутке
+          // The video in the column is the one in the URL: Instagram changes the URL while scrolling
           postId: () => shortcodeFromHref(location.pathname),
           root: () => reelBox,
         }),
@@ -443,14 +443,14 @@ function scanReels() {
   }
 }
 
-/** pk текущей истории из адреса `/stories/<user>/<pk>/`. У первой истории автора его нет. */
+/** pk of the current story from the `/stories/<user>/<pk>/` URL. The author's first story has none. */
 function storyPk(): string | undefined {
   return location.pathname.match(/^\/stories\/(?!highlights\/)[^/]+\/(\d+)/)?.[1];
 }
 
 /**
- * Номер текущей истории по полоскам прогресса над ней. Полоски — ряд одинаковых сегментов,
- * по одному на историю; у текущего заливка сдвинута через translateX (она «едет»).
+ * Current story number from the progress bars above it. The bars are a row of equal segments,
+ * one per story; the current one's fill is shifted with translateX (it "moves").
  */
 function storyProgressIndex(media: HTMLElement): number | undefined {
   const area = media.getBoundingClientRect();
@@ -467,7 +467,7 @@ function storyProgressIndex(media: HTMLElement): number | undefined {
       );
     },
   );
-  // Сегмент — предок заливки, у родителя которого несколько детей одной ширины
+  // The segment is an ancestor of the fill whose parent has several children of equal width
   for (let segment = moving; segment?.parentElement; segment = segment.parentElement) {
     const siblings = [...segment.parentElement.children];
     const width = segment.getBoundingClientRect().width;
@@ -482,8 +482,8 @@ function storyProgressIndex(media: HTMLElement): number | undefined {
 }
 
 /**
- * История по её месту в ленте: для видео в хайлайтах, где в адресе нет id истории, а по
- * картинке видео не найти. Длительность ролика сверяем с данными, чтобы не ошибиться номером.
+ * The story by its position in the reel: for videos in highlights, where the URL has no story id and
+ * a video can't be found by image. The video duration is checked against the data to get the number right.
  */
 function storyByPosition(slide: Slide): MediaPost | undefined {
   const index = storyProgressIndex(slide.media);
@@ -510,36 +510,36 @@ function storyByPosition(slide: Slide): MediaPost | undefined {
   return post;
 }
 
-/** pk текущей истории, а если его нет — номер по полоскам прогресса. */
+/** pk of the current story, or if there is none, its number from the progress bars. */
 const storySource = (root: Element): PostSource => ({
   postId: storyPk,
   root: () => root,
   fallback: storyByPosition,
 });
 
-/** Кнопка в шапке сторис, чтобы обновлять её состояние «ждём загрузку». */
+/** The button in the story header, to update its "waiting for load" state. */
 let storyButton: HTMLElement | undefined;
 
 /**
- * Готова ли история к скачиванию: медиа загрузилось и данные о нём пришли.
- * Пока нет — кнопка показывает ожидание, а не появляется внезапно.
+ * Whether the story is ready to download: the media has loaded and its data has arrived.
+ * Until then the button shows waiting instead of appearing suddenly.
  */
 function storyReady(root: Element): boolean {
   const slide = visibleSlide(root);
   return Boolean(slide && resolvePost(storySource(root), slide));
 }
 
-/** Сторис: в шапке над историей «автор · время … пауза, меню». Ставим ⬇ перед паузой. */
+/** Stories: header above the story "author · time … pause, menu". ⬇ goes before pause. */
 function scanStories() {
   if (!/^\/stories\//.test(location.pathname)) return;
-  // Медиа истории ищем по размеру, не дожидаясь загрузки, чтобы кнопка появилась сразу
+  // Story media is found by size without waiting for it to load, so the button appears at once
   const view = viewport();
   const media = [...document.querySelectorAll<HTMLElement>('img, video')]
     .filter((el) => el.getBoundingClientRect().height > 300 && !el.closest('a[href]'))
     .sort((a, b) => visibleArea(b, view) - visibleArea(a, view))[0];
   if (!media) return;
   const area = media.getBoundingClientRect();
-  // Ищем кнопки шапки: в верхней полосе истории, правее середины
+  // Header buttons: in the top strip of the story, right of the middle
   for (let el = media.parentElement; el; el = el.parentElement) {
     const header = svgButtons(el).filter((button) => {
       const r = button.getBoundingClientRect();
@@ -558,7 +558,7 @@ function scanStories() {
     const root = el;
     if (!hasOurButton(row)) {
       const first = [...row.children].find((child) => child.contains(header[0]!))!;
-      // Если pk в адресе нет (хайлайты, первая история), пост ищется по картинке или по номеру
+      // Without a pk in the URL (highlights, first story) the post is found by image or by number
       storyButton = createInlineButton('row', buttonOptions(storySource(root)));
       insertButton(row, first, first, storyButton);
     }
@@ -567,7 +567,7 @@ function scanStories() {
   }
 }
 
-/** Плитки сеток: профиль, «Ещё от автора», поиск. Панели нет — кнопка поверх превью. */
+/** Grid tiles: profile, "More from", search. No bar, so the button sits over the preview. */
 function scanGrid() {
   for (const tile of document.querySelectorAll<HTMLAnchorElement>(
     'a[href*="/p/"], a[href*="/reel/"]',
@@ -592,20 +592,20 @@ function scan() {
 
 function watchPage() {
   const schedule = watchDom(scan);
-  // В Reels следующий ролик появляется прокруткой, а не изменением DOM
+  // In Reels the next video appears by scrolling, not by a DOM change
   window.addEventListener('scroll', schedule, { passive: true, capture: true });
-  // Загрузка медиа и приход данных не меняют DOM, а от них зависит ожидание в сторис
+  // Media loading and data arriving don't change the DOM, but the story waiting state depends on them
   document.addEventListener('load', schedule, true);
   document.addEventListener('loadeddata', schedule, true);
   window.addEventListener('message', schedule);
 }
 
-// ---- Контекстное меню «Скачать» ----
+// ---- Context menu "Download" ----
 
-/** Фото или видео под курсором, когда последний раз открывали контекстное меню. */
+/** Photo or video under the cursor the last time the context menu was opened. */
 let contextTarget: Element | undefined;
 
-/** Медиа под точкой: сквозь прозрачные слои Instagram, которые лежат поверх фото. */
+/** Media under a point: through Instagram's transparent layers over the photo. */
 function mediaAtPoint(x: number, y: number): Element | undefined {
   return document
     .elementsFromPoint(x, y)
@@ -616,9 +616,9 @@ function mediaAtPoint(x: number, y: number): Element | undefined {
 }
 
 /**
- * Пункт меню делает то же, что ⬇ этого поста: ищем ближайшую нашу кнопку вверх по дереву
- * от медиа. Так меню само понимает слайд карусели, Reels, сторис и плитки сеток.
- * Если кнопки нет, а это картинка — ищем пост по имени файла или скачиваем её как есть.
+ * The menu item does the same as this post's ⬇: find our nearest button up the tree
+ * from the media. This way the menu handles carousel slides, Reels, stories and grid tiles.
+ * If there is no button and it's an image, find the post by file name or download the image as is.
  */
 async function contextDownload(request: ContextDownloadRequest) {
   if (!contextTarget) throw new Error('no photo or video under the cursor');
@@ -653,12 +653,12 @@ async function contextDownload(request: ContextDownloadRequest) {
   }
 }
 
-// ---- Фоновая вкладка для «Скачать оригинал» ----
+// ---- Background tab for "Download original" ----
 
-/** Проверка «данные готовы — отдаём», пока вкладка ждёт пост. */
+/** The "data ready, hand it over" check while the tab waits for the post. */
 let harvest: (() => void) | undefined;
 
-/** Все фото поста в полном размере: столько, сколько обещает original_width. */
+/** All post photos at full size: as many as original_width promises. */
 function hasOriginals(post: MediaPost): boolean {
   return post.items.every(
     (item) =>
@@ -680,17 +680,17 @@ function startHarvest(postId: string) {
     if (post && hasOriginals(post)) send();
   };
   harvest();
-  // Если полного списка размеров так и не пришло, отдаём лучшее, что есть
+  // If the full list of sizes never arrived, hand over the best there is
   setTimeout(send, 5000);
 }
 
 export default defineContentScript({
   matches: ['*://*.instagram.com/*'],
-  // Слушаем перехватчик с самого начала: встроенный JSON он разбирает ещё до загрузки DOM
+  // Listen to the interceptor from the start: it parses embedded JSON before the DOM loads
   runAt: 'document_start',
   main() {
-    // Instagram накрывает медиа прозрачным слоем, поэтому запоминаем фото или видео
-    // под курсором, а не цель клика: от него дойдём до кнопки поста
+    // Instagram covers media with a transparent layer, so remember the photo or video
+    // under the cursor, not the click target: from it we reach the post's button
     document.addEventListener(
       'contextmenu',
       (event) => {
@@ -711,7 +711,7 @@ export default defineContentScript({
       harvest?.();
     });
 
-    // Если background открыл эту вкладку ради оригинала, отдаём ему данные поста
+    // If the background opened this tab for the original, hand it the post data
     void browser.runtime
       .sendMessage({ type: 'harvest-check' })
       .then((target: HarvestCheckResponse) => target && startHarvest(target.postId));

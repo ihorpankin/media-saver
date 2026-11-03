@@ -1,7 +1,7 @@
 /**
- * Разбор DASH-манифеста (MPD). Instagram отдаёт видео и звук раздельными дорожками:
- * каждая `Representation` — это целый mp4-файл по ссылке из `BaseURL`.
- * Разбираем регулярками, а не DOMParser: в service worker его нет, а так код ещё и легко тестировать.
+ * DASH manifest (MPD) parsing. Instagram serves video and audio as separate tracks:
+ * each `Representation` is a whole mp4 file at the `BaseURL` link.
+ * Parsed with regexes, not DOMParser: the service worker doesn't have it, and this way the code is easy to test.
  */
 
 export interface DashTrack {
@@ -50,12 +50,12 @@ export function parseMpd(xml: string): DashTrack[] {
   return tracks;
 }
 
-/** Высота кадра с учётом поворота: у вертикального видео большая сторона — высота. */
+/** Frame height with rotation: for a vertical video the long side is the height. */
 const size = (t: DashTrack) => Math.max(t.width ?? 0, t.height ?? 0);
 
 /**
- * Лучшие дорожки: видео с наибольшим разрешением (при равенстве — H.264 ради совместимости
- * со старыми плеерами, потом больший битрейт) и звук с наибольшим битрейтом.
+ * The best tracks: video with the highest resolution (on a tie, H.264 for compatibility
+ * with old players, then higher bitrate) and audio with the highest bitrate.
  */
 export function pickDashTracks(tracks: DashTrack[]): { video?: DashTrack; audio?: DashTrack } {
   const isAvc = (t: DashTrack) => Number(t.codecs.startsWith('avc1'));
@@ -68,7 +68,7 @@ export function pickDashTracks(tracks: DashTrack[]): { video?: DashTrack; audio?
   return { video, audio };
 }
 
-/** Большая сторона кадра лучшей видеодорожки — чтобы сравнить с прогрессивным mp4. */
+/** The long side of the best video track's frame, to compare with the progressive mp4. */
 export function dashResolution(tracks: DashTrack[]): number {
   const { video } = pickDashTracks(tracks);
   return video ? size(video) : 0;

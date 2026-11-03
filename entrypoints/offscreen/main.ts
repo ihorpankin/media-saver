@@ -1,8 +1,8 @@
 import type { MuxResponse, OffscreenRequest } from '@/lib/core/messages';
 import { muxVideoAudio } from '@/lib/offscreen/mux';
 
-// Скрытая страница расширения (offscreen document). У service worker нет URL.createObjectURL
-// и мало времени жизни, поэтому скачивание дорожек и склейка видео идут здесь.
+// Hidden extension page (offscreen document). The service worker has no URL.createObjectURL
+// and a short lifetime, so track downloads and video muxing happen here.
 
 async function download(url: string): Promise<ArrayBuffer> {
   const response = await fetch(url);

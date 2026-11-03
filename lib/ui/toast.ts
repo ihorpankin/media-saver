@@ -1,7 +1,7 @@
 /**
- * Короткое сообщение внизу экрана — так пользователь видит текст ошибки, а не только красную
- * иконку. Отдельный элемент в `body`, а не рядом с кнопкой: панели сайтов часто обрезают
- * всё, что выходит за их границы. Новое сообщение заменяет старое.
+ * A short message at the bottom of the screen, so the user sees the error text and not just a red
+ * icon. A separate element in `body`, not next to the button: site bars often clip
+ * anything that goes past their edges. A new message replaces the old one.
  */
 
 const STYLE = `

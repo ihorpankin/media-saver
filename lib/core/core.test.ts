@@ -12,15 +12,15 @@ const image = (extra: Partial<MediaItem> = {}): MediaItem => ({
 });
 
 describe('hasLargerOriginal', () => {
-  it('true, когда оригинал шире доступной версии', () => {
+  it('true when the original is wider than the available version', () => {
     expect(hasLargerOriginal(image({ width: 1080, originalWidth: 3000 }))).toBe(true);
   });
 
-  it('false, когда доступен сам оригинал', () => {
+  it('false when the original itself is available', () => {
     expect(hasLargerOriginal(image({ width: 3000, originalWidth: 3000 }))).toBe(false);
   });
 
-  it('false без данных о размере и для видео', () => {
+  it('false without size data and for videos', () => {
     expect(hasLargerOriginal(image())).toBe(false);
     expect(hasLargerOriginal(image({ kind: 'video', width: 720, originalWidth: 1440 }))).toBe(
       false,
@@ -29,7 +29,7 @@ describe('hasLargerOriginal', () => {
 });
 
 describe('isPageMessage', () => {
-  it('принимает только сообщения нашего канала', () => {
+  it('accepts only messages of our channel', () => {
     expect(isPageMessage({ channel: PAGE_CHANNEL, type: 'posts', posts: [] })).toBe(true);
     expect(isPageMessage({ channel: 'other' })).toBe(false);
     expect(isPageMessage(null)).toBe(false);

@@ -1,8 +1,8 @@
 import type { BackgroundRequest, DownloadResponse } from '@/lib/core/messages';
 
 /**
- * Отправляет запрос на скачивание в background и ждёт, пока файлы скачаются.
- * Ошибки по файлам превращает в исключение — его кнопка покажет как ошибку.
+ * Sends a download request to the background and waits for the files to download.
+ * Per-file errors become an exception, which the button shows as an error.
  */
 export async function requestDownload(request: BackgroundRequest): Promise<DownloadResponse> {
   const response: DownloadResponse = await browser.runtime.sendMessage(request);
@@ -13,10 +13,10 @@ export async function requestDownload(request: BackgroundRequest): Promise<Downl
 }
 
 /**
- * Вызывает `scan` сейчас и после каждого изменения DOM, но не чаще раза за кадр: все сайты —
- * SPA с бесконечной лентой, посты постоянно добавляются и перерисовываются.
- * Скрипты на `document_start` ждут DOMContentLoaded. Возвращает функцию, которая
- * запрашивает пересканирование, — для событий, которые DOM не меняют.
+ * Calls `scan` now and after every DOM change, but at most once per frame: all the sites are
+ * SPAs with an infinite feed, posts keep being added and re-rendered.
+ * Scripts at `document_start` wait for DOMContentLoaded. Returns a function that
+ * requests a rescan, for events that don't change the DOM.
  */
 export function watchDom(scan: () => void): () => void {
   let scheduled = false;

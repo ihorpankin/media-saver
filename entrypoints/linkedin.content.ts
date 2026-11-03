@@ -8,16 +8,16 @@ import {
 import { requestDownload, watchDom } from '@/lib/content/page';
 import { createInlineButton, triggerDownload } from '@/lib/ui/download-button';
 
-// LinkedIn: кнопка ⬇ в строке действий поста (реакция, комментарий, репост, отправить).
-// В новой ленте LinkedIn нет ни id постов, ни JSON с данными — всё собирается из разметки:
-// пост находим по кнопке реакции, картинки — по адресам media.licdn.com.
-// Видео — плеер video.js: среди его источников есть целые mp4 (H.264 + AAC, до 720p),
-// они качаются без cookie. Список источников достаёт linkedin-page.content.ts.
+// LinkedIn: the ⬇ button in the post's action row (react, comment, repost, send).
+// The new LinkedIn feed has neither post ids nor JSON data, so everything comes from markup:
+// the post is found by its reaction button, images by media.licdn.com URLs.
+// Video is a video.js player: its sources include whole mp4 files (H.264 + AAC, up to 720p)
+// that download without cookies. The source list is fetched by linkedin-page.content.ts.
 
-// Только сама кнопка: у счётчика «36 reactions» в подписи тоже есть «reaction»
+// Only the button itself: the "36 reactions" counter label also contains "reaction"
 const REACTION = 'button[aria-label^="Reaction button"]';
 
-/** Пост — самый верхний предок кнопки реакции, в котором нет кнопок реакции других постов. */
+/** The post is the topmost ancestor of the reaction button without reaction buttons of other posts. */
 function postOf(reaction: Element): Element {
   let post = reaction;
   for (let el = reaction.parentElement; el && el !== document.body; el = el.parentElement) {
@@ -27,7 +27,7 @@ function postOf(reaction: Element): Element {
   return post;
 }
 
-/** Строка действий — ближайший предок кнопки реакции, где есть ещё комментарий, репост, отправка. */
+/** The action row is the nearest ancestor of the reaction button that also has comment, repost and send. */
 function actionRowOf(reaction: Element): Element | undefined {
   for (let el = reaction.parentElement; el; el = el.parentElement) {
     if (el.querySelectorAll('button, a[href]').length >= 4) return el;
@@ -35,7 +35,7 @@ function actionRowOf(reaction: Element): Element | undefined {
   return undefined;
 }
 
-/** Самая крупная версия картинки, которую LinkedIn отдал странице (адреса подписаны, размер не поменять). */
+/** The largest version of the image LinkedIn gave the page (URLs are signed, the size can't be changed). */
 function largestSrc(img: HTMLImageElement): string {
   const candidates = (img.getAttribute('srcset') ?? '')
     .split(',')
@@ -46,27 +46,27 @@ function largestSrc(img: HTMLImageElement): string {
   return candidates[0]?.url ?? (img.currentSrc || img.src);
 }
 
-/** Фото поста: крупные картинки с media.licdn.com (`feedshare-…`). */
+/** Post photos: large images from media.licdn.com (`feedshare-…`). */
 function postImages(post: Element): HTMLImageElement[] {
   return [...post.querySelectorAll<HTMLImageElement>('img')].filter((img) => {
     const src = img.currentSrc || img.src;
     return (
       src.includes('media.licdn.com/dms/image/') &&
-      // аватарки, логотипы и обложки видео лежат там же, где фото
+      // avatars, logos and video covers live in the same place as photos
       !/profile-displayphoto|profile-framedphoto|company-logo|videocover/.test(src) &&
       img.getBoundingClientRect().width > 200
     );
   });
 }
 
-/** id картинки в адресе `…/dms/image/v2/<id>/<размер>/…` — из него имя файла. */
+/** Image id in the `…/dms/image/v2/<id>/<size>/…` URL, used for the file name. */
 function imageId(url: string): string {
   return url.match(/\/dms\/image\/v2\/([^/]+)\//)?.[1] ?? 'image';
 }
 
 /**
- * Автор поста. Первой в посте часто идёт ссылка на того, кто его лайкнул или прокомментировал
- * («X likes this»), поэтому ищем ссылку с пометкой связи «• 2nd» или «• Following» — она у автора.
+ * The post author. The first link in a post is often to whoever liked or commented on it
+ * ("X likes this"), so look for the link with a connection mark "• 2nd" or "• Following": that's the author.
  */
 function authorOf(post: Element): string | undefined {
   const links = [...post.querySelectorAll('a[href*="/in/"], a[href*="/company/"]')];
@@ -74,15 +74,15 @@ function authorOf(post: Element): string | undefined {
   return author?.getAttribute('href')?.match(/\/(?:in|company)\/([^/?#]+)/)?.[1];
 }
 
-/** Видеоплеер поста (video.js). */
+/** The post's video player (video.js). */
 function playerOf(post: Element): HTMLElement | null {
   return post.querySelector<HTMLElement>('.video-js');
 }
 
 /**
- * Лучший mp4 ролика. Список вариантов есть только у объекта плеера в JS страницы, поэтому
- * спрашиваем linkedin-page.content.ts: событие доходит до него синхронно, и ответ уже лежит
- * в атрибуте плеера, когда dispatchEvent вернулся.
+ * The best mp4 of the video. Only the player object in the page's JS has the list of variants, so
+ * ask linkedin-page.content.ts: the event reaches it synchronously, and the answer is already
+ * in the player attribute when dispatchEvent returns.
  */
 function bestMp4(player: HTMLElement): string | undefined {
   player.dispatchEvent(new CustomEvent(LINKEDIN_SOURCES_EVENT, { bubbles: true }));
@@ -99,7 +99,7 @@ async function downloadPost(post: Element) {
   if (player) {
     const url = bestMp4(player);
     if (!url) throw new Error('no mp4 for this video (player not loaded yet?)');
-    // id ролика — тот же, что у обложки: …/playlist/vid/v2/<id>/mp4-720p-…
+    // Video id is the same as the cover's: …/playlist/vid/v2/<id>/mp4-720p-…
     postId = url.match(/\/playlist\/vid\/v2\/([^/]+)\//)?.[1] ?? 'video';
     items = [{ kind: 'video', mediaId: postId, index: 1, url, ext: 'mp4' }];
   } else {
@@ -129,8 +129,8 @@ function scan() {
     const video = playerOf(post) !== null;
     if (!video && postImages(post).length === 0) continue;
 
-    // Ставим после кнопок действий: перед первым элементом-обёрткой после реакции
-    // (дальше в строке идут счётчики реакций)
+    // Place it after the action buttons: before the first wrapper element after the reaction
+    // (reaction counters come next in the row)
     const children = [...row.children];
     const before = children.slice(1).find((child) => child.tagName === 'DIV') ?? null;
     const template = before?.previousElementSibling ?? row.lastElementChild;
@@ -148,7 +148,7 @@ function scan() {
   }
 }
 
-// ---- Контекстное меню: нажимаем ⬇ поста, на котором кликнули ----
+// ---- Context menu: press ⬇ of the post that was clicked ----
 
 let contextTarget: Element | undefined;
 

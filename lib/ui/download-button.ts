@@ -1,16 +1,16 @@
 /**
- * Кнопка «⬇» и, для каруселей, «Все N». Два вида:
- *   - встроенная в панель действий сайта (рядом с лайком): `createInlineButton`;
- *   - поверх медиа при наведении, где панели нет (плитки сеток): `attachOverlayButton`.
- * Живёт в Shadow DOM, чтобы стили сайта её не ломали, а наши стили не протекали на сайт.
+ * The "⬇" button and, for carousels, "All N". Two kinds:
+ *   - embedded in the site's action bar (next to Like): `createInlineButton`;
+ *   - over the media on hover, where there is no bar (grid tiles): `attachOverlayButton`.
+ * Lives in Shadow DOM so the site's styles don't break it and ours don't leak into the site.
  */
 
 import { showError } from './toast';
 
-/** `waiting` — медиа ещё грузится на странице, скачивать пока нечего. */
+/** `waiting`: the media is still loading on the page, nothing to download yet. */
 type State = 'idle' | 'waiting' | 'loading' | 'done' | 'error';
 
-/** Атрибут на контейнере, чтобы не ставить вторую кнопку в то же место. */
+/** Attribute on the container, so a second button isn't placed in the same spot. */
 const ATTACHED_ATTR = 'data-media-saver';
 
 const ICONS: Record<State, string> = {
@@ -41,20 +41,20 @@ const BASE_STYLE = `
   @keyframes spin { to { transform: rotate(360deg); } }
 `;
 
-/** Встроенная кнопка: строка (лента, пост, сторис) или колонка (Reels). */
+/** Inline button: a row (feed, post, stories) or a column (Reels). */
 const INLINE_STYLE = `
   :host { display: inline-flex; align-items: center; gap: 10px; color: inherit; }
   :host([layout="column"]) { flex-direction: column; gap: 4px; }
   .main { padding: 8px; }
   :host([layout="column"]) .main { padding: 0; }
   .all:hover, .main:hover, .original:hover { opacity: .7; }
-  /* Компактно — когда в строке сайта нет места: только иконка, «Все N» — значком на её углу */
+  /* Compact, when the site's row has no room: just the icon, "All N" as a badge on its corner */
   :host([compact]) { position: relative; }
   :host([compact]) .main { padding: 0; }
   :host([compact]) .original { display: none; }
   :host([compact]) .all { position: absolute; top: -7px; right: -9px; min-width: 16px; height: 16px;
     padding: 0 4px; border-radius: 8px; background: #0095f6; color: #fff; font-size: 10px; }
-  /* Колонка Shorts: иконка в кружке, подпись под ней. Цвета задаёт вызывающий по соседней кнопке */
+  /* Shorts column: icon in a circle, label below. Colors are set by the caller from the neighboring button */
   :host([layout="circle"]) { flex-direction: column; }
   :host([layout="circle"]) .main { flex-direction: column; gap: 6px; padding: 0;
     font: 400 12px/18px Roboto, Arial, sans-serif; }
@@ -64,7 +64,7 @@ const INLINE_STYLE = `
   :host([layout="circle"]) .main:hover svg { filter: brightness(1.4); }
 `;
 
-/** Кнопка поверх медиа: полупрозрачный кружок, появляется при наведении. */
+/** Button over the media: a translucent circle that appears on hover. */
 const OVERLAY_STYLE = `
   :host { all: initial; position: absolute; bottom: 10px; left: 10px; z-index: 2147483000;
     display: flex; gap: 6px; align-items: center; color: #fff;
@@ -83,17 +83,17 @@ const OVERLAY_STYLE = `
 `;
 
 export interface DownloadButtonOptions {
-  /** Что делать по клику. Ошибка из промиса покажется в подсказке кнопки и внизу экрана. */
+  /** What to do on click. An error from the promise shows in the button tooltip and at the bottom of the screen. */
   onClick: () => Promise<void>;
   title?: string;
-  /** Подпись рядом с иконкой, например «Видео». Во время скачивания её место занимает процент. */
+  /** Label next to the icon, e.g. "Video". While downloading, the percentage takes its place. */
   label?: string;
-  /** Кнопка «Все N». Показывается, только если `count()` больше 1. */
+  /** The "All N" button. Shown only if `count()` is greater than 1. */
   all?: {
     count: () => number | undefined;
     onClick: () => Promise<void>;
   };
-  /** Кнопка «HD …» для оригинала. Показывается, только если `label()` что-то вернул. */
+  /** The "HD …" button for the original. Shown only if `label()` returned something. */
   original?: {
     label: () => { text: string; title: string } | undefined;
     onClick: () => Promise<void>;
@@ -102,34 +102,34 @@ export interface DownloadButtonOptions {
 
 interface Control {
   host: HTMLElement;
-  /** Пересчитать «Все N» (данные поста могли прийти после того, как кнопку поставили). */
+  /** Recount "All N" (the post data may arrive after the button was placed). */
   refresh: () => void;
 }
 
-/** Переключатели ожидания для каждой кнопки: состояние живёт внутри замкнутого Shadow DOM. */
+/** Waiting toggles for each button: the state lives inside the closed Shadow DOM. */
 const waitingSetters = new WeakMap<HTMLElement, (waiting: boolean) => void>();
 
-/** Показать или снять ожидание загрузки. Не трогает кнопку во время скачивания и сразу после. */
+/** Show or clear the waiting state. Doesn't touch the button during a download or right after. */
 export function setWaiting(host: HTMLElement, waiting: boolean) {
   waitingSetters.get(host)?.(waiting);
 }
 
-/** Обновление процента во время долгого скачивания (видео YouTube через yt-dlp). */
+/** Percentage updates during a long download (YouTube video via yt-dlp). */
 const progressSetters = new WeakMap<HTMLElement, (percent: number) => void>();
 
 export function setProgress(host: HTMLElement, percent: number) {
   progressSetters.get(host)?.(percent);
 }
 
-/** Какое действие кнопки запустить извне. */
+/** Which button action to trigger from outside. */
 export type ButtonAction = 'slide' | 'all' | 'original';
 
-/** Действия кнопок для запуска извне — из контекстного меню. */
+/** Button actions to trigger from outside, from the context menu. */
 const actions = new WeakMap<HTMLElement, (action: ButtonAction) => void>();
 
 /**
- * Нажать кнопку программно: со спиннером, галочкой и текстом ошибки, как при клике.
- * У плиток сеток одно действие — весь пост, им же отвечаем на любое.
+ * Press the button programmatically: with the spinner, checkmark and error text, as on a click.
+ * Grid tiles have one action, the whole post, and it answers any request.
  */
 export function triggerDownload(host: HTMLElement, action: ButtonAction = 'slide'): boolean {
   const trigger = actions.get(host);
@@ -218,12 +218,12 @@ function createControl(
     [allButton, all?.onClick],
     [originalButton, original?.onClick],
   ] as const) {
-    // Сайт не должен видеть нажатия на кнопки: иначе двойной клик ставит лайк, а нажатие листает карусель
+    // The site must not see presses on the buttons: otherwise a double click likes the post and a press swipes the carousel
     for (const type of ['pointerdown', 'mousedown', 'dblclick'] as const) {
       button.addEventListener(type, (event) => event.stopPropagation());
     }
     button.addEventListener('click', (event) => {
-      // Клик не должен открывать пост или переключать сторис под кнопкой
+      // The click must not open the post or switch the story under the button
       event.preventDefault();
       event.stopPropagation();
       if (task) void run(task);
@@ -234,11 +234,11 @@ function createControl(
 }
 
 /**
- * Кнопка для панели действий сайта. Вызывающий сам вставляет `host` в нужное место.
- * Цвет наследуется от панели, поэтому кнопка выглядит как родная и в светлой, и в тёмной теме.
+ * A button for the site's action bar. The caller inserts `host` where it belongs.
+ * The color is inherited from the bar, so the button looks native in both light and dark themes.
  *
- * `fitWithin` — строка сайта, в которой стоит кнопка. Если с полной кнопкой она переполняется
- * (узкая колонка поста, где у иконок ещё и счётчики), кнопка становится компактной.
+ * `fitWithin` is the site's row holding the button. If the full button makes it overflow
+ * (a narrow post column where the icons also have counters), the button turns compact.
  */
 export function createInlineButton(
   layout: 'row' | 'column' | 'circle',
@@ -256,17 +256,17 @@ export function createInlineButton(
     }
     refresh();
   };
-  // Ширина самой строки задаётся страницей, а не кнопкой, поэтому переключение не зацикливается
+  // The row's width is set by the page, not by the button, so toggling doesn't loop
   if (fitWithin) new ResizeObserver(update).observe(fitWithin);
   update();
-  // Данные поста могут прийти позже, чем появилась панель: пересчитываем при наведении
+  // Post data may arrive after the bar appeared: recount on hover
   host.addEventListener('mouseenter', update);
   return host;
 }
 
 /**
- * Ставит кнопку в левый нижний угол контейнера и показывает её при наведении.
- * Возвращает `null`, если кнопка там уже есть.
+ * Places the button in the bottom-left corner of the container and shows it on hover.
+ * Returns `null` if the button is already there.
  */
 export function attachOverlayButton(
   container: HTMLElement,

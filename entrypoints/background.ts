@@ -18,7 +18,7 @@ export default defineBackground(() => {
         return true;
       case 'download':
         handleDownload(message).then(sendResponse, (e: unknown) => sendResponse(failed(e)));
-        // Ответ асинхронный: держим канал открытым
+        // Async response: keep the channel open
         return true;
       case 'download-original':
         handleOriginal(message).then(sendResponse, (e: unknown) => sendResponse(failed(e)));

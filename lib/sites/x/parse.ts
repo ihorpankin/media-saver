@@ -2,9 +2,9 @@ import type { PageDataParser } from '@/lib/core/page-parser';
 import type { MediaItem, MediaPost } from '@/lib/core/media';
 
 /*
- * Разбор твитов из GraphQL-ответов X (`/i/api/graphql/<id>/UserTweets`, `TweetDetail`, …).
- * Твит — объект с `rest_id` и `legacy.extended_entities.media`. Ищем по форме, а не по пути:
- * ответы разных запросов вложены по-разному (лента, ответы, цитаты, «твит с ограничениями»).
+ * Parsing tweets from X GraphQL responses (`/i/api/graphql/<id>/UserTweets`, `TweetDetail`, …).
+ * A tweet is an object with `rest_id` and `legacy.extended_entities.media`. Found by shape, not by path:
+ * responses of different requests are nested differently (timeline, replies, quotes, "tweet with visibility limits").
  */
 
 interface XVariant {
@@ -43,8 +43,8 @@ function isTweet(value: object): value is XTweet {
 }
 
 /**
- * Фото в оригинальном размере: `…/media/<id>.jpg` → `…/media/<id>?format=jpg&name=orig`.
- * Без `name=orig` X отдаёт уменьшенную копию.
+ * Photo at original size: `…/media/<id>.jpg` → `…/media/<id>?format=jpg&name=orig`.
+ * Without `name=orig` X serves a reduced copy.
  */
 export function originalPhotoUrl(url: string): { url: string; ext: string } {
   const match = url.match(/^(.*)\.(\w+)$/);
@@ -52,7 +52,7 @@ export function originalPhotoUrl(url: string): { url: string; ext: string } {
   return { url: `${match[1]}?format=${match[2]}&name=orig`, ext: match[2]!.toLowerCase() };
 }
 
-/** Видео и GIF: mp4 с наибольшим битрейтом (кроме mp4 есть ещё HLS-плейлист m3u8). */
+/** Videos and GIFs: the mp4 with the highest bitrate (besides mp4 there's also an HLS m3u8 playlist). */
 export function bestVariant(variants: XVariant[] = []): XVariant | undefined {
   return variants
     .filter((v) => v.content_type === 'video/mp4')
@@ -93,7 +93,7 @@ function toPost(tweet: XTweet): MediaPost {
   };
 }
 
-/** Находит все твиты с медиа в любом JSON X. */
+/** Finds all tweets with media in any X JSON. */
 export function parseX(json: unknown): MediaPost[] {
   const posts: MediaPost[] = [];
   const walk = (node: unknown) => {
@@ -105,7 +105,7 @@ export function parseX(json: unknown): MediaPost[] {
     if (isTweet(node)) {
       const post = toPost(node);
       if (post.items.length > 0) posts.push(post);
-      // Не выходим: внутри может быть цитируемый твит со своими медиа
+      // Don't stop: there may be a quoted tweet with its own media inside
     }
     Object.values(node).forEach(walk);
   };

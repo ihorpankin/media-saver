@@ -2,8 +2,8 @@ import { PAGE_CHANNEL, type PagePostsMessage } from '@/lib/core/messages';
 import { installInterceptor, watchInlineData } from '@/lib/page/interceptor';
 import { tiktokPageParser } from '@/lib/sites/tiktok/parse';
 
-// Как instagram-page.content.ts, но для TikTok: ролик страницы приходит во встроенном
-// `__UNIVERSAL_DATA_FOR_REHYDRATION__`, ленты — запросами `/api/…/item_list/`.
+// Like instagram-page.content.ts, but for TikTok: the page's video comes in the embedded
+// `__UNIVERSAL_DATA_FOR_REHYDRATION__`, feeds come through `/api/…/item_list/` requests.
 export default defineContentScript({
   matches: ['*://www.tiktok.com/*'],
   world: 'MAIN',

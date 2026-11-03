@@ -2,29 +2,29 @@ import type { PageDataParser } from '@/lib/core/page-parser';
 import type { MediaPost } from '@/lib/core/media';
 
 /*
- * Пассивный перехват данных страницы (способ C). Работает в MAIN world: подменяет
- * XMLHttpRequest и fetch, читает ответы, которые сайт и так получает, и разбирает
- * встроенный в HTML JSON. Своих запросов не делает.
+ * Passive interception of page data (method C). Runs in the MAIN world: patches
+ * XMLHttpRequest and fetch, reads responses the site receives anyway, and parses
+ * JSON embedded in the HTML. Makes no requests of its own.
  *
- * Главное правило: что бы ни случилось внутри, страница не должна сломаться.
- * Поэтому весь разбор — в try/catch и вне основного потока ответа.
+ * The main rule: whatever happens inside, the page must not break.
+ * So all parsing is in try/catch and off the main response flow.
  */
 
 type Emit = (posts: MediaPost[]) => void;
 
-/** Ответы Facebook/Instagram иногда начинаются с защитного префикса `for (;;);`. */
+/** Facebook/Instagram responses sometimes start with the protective prefix `for (;;);`. */
 function parseJsonText(text: string): unknown {
   return JSON.parse(text.replace(/^for \(;;\);/, ''));
 }
 
 function handle(parser: PageDataParser, emit: Emit, read: () => unknown) {
-  // Разбираем после текущей задачи, чтобы не задерживать обработчики самой страницы
+  // Parse after the current task so as not to delay the page's own handlers
   setTimeout(() => {
     try {
       const posts = parser.parse(read());
       if (posts.length > 0) emit(posts);
     } catch {
-      // Не JSON или неожиданная структура — пропускаем
+      // Not JSON or an unexpected structure: skip
     }
   }, 0);
 }
@@ -70,16 +70,16 @@ function hookFetch(parser: PageDataParser, emit: Emit) {
         handle(parser, emit, () => parseJsonText(text));
       }
     } catch {
-      // Ответ не читается (например, opaque) — пропускаем
+      // The response can't be read (e.g. opaque): skip
     }
     return response;
   };
 }
 
-/** Разбирает JSON, встроенный в HTML при первой загрузке страницы. */
+/** Parses JSON embedded in the HTML on the first page load. */
 export function watchInlineData(parser: PageDataParser, emit: Emit, marker: string) {
-  // Instagram дописывает блоки данных в конец страницы и после DOMContentLoaded
-  // (так приходит, например, первая порция Explore), поэтому следим за ними всё время загрузки
+  // Instagram appends data blocks to the end of the page even after DOMContentLoaded
+  // (that's how the first batch of Explore arrives), so they are watched during the whole load
   const done = new WeakSet<Element>();
   let scheduled = false;
 
@@ -88,16 +88,16 @@ export function watchInlineData(parser: PageDataParser, emit: Emit, marker: stri
     for (const script of document.querySelectorAll('script[type="application/json"]')) {
       if (done.has(script)) continue;
       const text = script.textContent ?? '';
-      // Дешёвая проверка до дорогого JSON.parse: большинство скриптов медиа не содержат
+      // A cheap check before the expensive JSON.parse: most scripts contain no media
       if (!text.includes(marker)) continue;
       try {
         const json = parseJsonText(text);
-        // Помечаем только успешно разобранные: большой блок может прийти не целиком
+        // Mark only successfully parsed ones: a large block may arrive incomplete
         done.add(script);
         const posts = parser.parse(json);
         if (posts.length > 0) emit(posts);
       } catch {
-        // Блок ещё дописывается или это не наш формат — попробуем при следующем проходе
+        // The block is still being written or isn't our format: try again on the next pass
       }
     }
   };
@@ -116,7 +116,7 @@ export function watchInlineData(parser: PageDataParser, emit: Emit, marker: stri
     'load',
     () => {
       scan();
-      // После загрузки встроенные блоки больше не появляются: дальше данные идут через XHR
+      // After loading, embedded blocks no longer appear: further data comes via XHR
       observer.disconnect();
     },
     { once: true },

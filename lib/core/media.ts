@@ -1,65 +1,65 @@
 /**
- * Общая модель медиа, одинаковая для всех сайтов.
- * Экстракторы переводят данные своего сайта в эти типы, а ядро (кнопки, скачивание,
- * имена файлов) работает только с ними.
+ * The common media model, the same for all sites.
+ * Parsers turn their site's data into these types, and the core (buttons, downloading,
+ * file names) works only with them.
  */
 
 export type SiteId = 'instagram' | 'youtube' | 'x' | 'tiktok' | 'linkedin';
 
 export type MediaKind = 'image' | 'video';
 
-/** Один файл внутри поста: фото или видео, в том числе слайд карусели. */
+/** One file inside a post: a photo or video, including a carousel slide. */
 export interface MediaItem {
   kind: MediaKind;
-  /** id медиа на сайте. Всегда строка: id Instagram не помещаются в Number. */
+  /** Media id on the site. Always a string: Instagram ids don't fit in a Number. */
   mediaId: string;
-  /** Номер внутри поста, с 1. У одиночного поста всегда 1. */
+  /** Position inside the post, from 1. Always 1 for a single post. */
   index: number;
-  /** Прямая ссылка на лучший готовый файл (картинка или прогрессивный mp4). */
+  /** Direct link to the best ready-made file (an image or progressive mp4). */
   url: string;
-  /** Расширение файла без точки: jpg, mp4, … */
+  /** File extension without the dot: jpg, mp4, … */
   ext: string;
   width?: number;
   height?: number;
   /**
-   * DASH-манифест (MPD, XML), если сайт отдаёт видео раздельными дорожками.
-   * Часто качество выше, чем у `url`, но видео и звук нужно склеивать.
+   * DASH manifest (MPD, XML), if the site serves video as separate tracks.
+   * Often higher quality than `url`, but video and audio need muxing.
    */
   dashManifest?: string;
   /**
-   * Видео в H.264 для настройки «Совместимое качество», если лучшее в `url` — в другом кодеке
-   * (TikTok отдаёт 1080p в H.265).
+   * H.264 video for the "Compatible" quality setting, if the best one in `url` uses another codec
+   * (TikTok serves 1080p in H.265).
    */
   compatibleUrl?: string;
-  /** Длительность видео в секундах, если известна. */
+  /** Video duration in seconds, if known. */
   duration?: number;
-  /** Размер оригинала, если сайт его сообщает. Нужен, чтобы предложить «Скачать оригинал». */
+  /** Original size, if the site reports it. Needed to offer "Download original". */
   originalWidth?: number;
   originalHeight?: number;
 }
 
-/** Пост целиком: одиночное медиа, карусель, Reels или элемент сторис. */
+/** A whole post: a single media item, a carousel, a Reel or a story item. */
 export interface MediaPost {
   site: SiteId;
-  /** Ключ поста, по которому кнопка в DOM находит данные (у Instagram — shortcode или pk сторис). */
+  /** The post key the DOM button uses to find the data (on Instagram, the shortcode or story pk). */
   postId: string;
-  /** Имя автора, без @. */
+  /** Author name, without @. */
   author?: string;
-  /** Время публикации, unix-секунды. */
+  /** Publication time, unix seconds. */
   takenAt?: number;
-  /** Постоянная ссылка на пост. */
+  /** Permanent link to the post. */
   permalink?: string;
   items: MediaItem[];
-  /** Сколько всего медиа в посте, если в `items` только часть (например, один слайд карусели). */
+  /** Total media in the post, if `items` holds only part of it (e.g. one carousel slide). */
   itemCount?: number;
   /**
-   * Место в ленте историй: id ленты (у хайлайта — `highlight:<id>`) и номер истории в ней, с 1.
-   * Нужно, чтобы найти текущую историю, когда её id нет в адресе страницы.
+   * Position in the story reel: the reel id (`highlight:<id>` for a highlight) and the story number in it, from 1.
+   * Needed to find the current story when its id isn't in the page URL.
    */
   reel?: { id: string; index: number };
 }
 
-/** Можно ли получить версию лучше той, что лежит в `url`. */
+/** Whether a better version than the one in `url` can be obtained. */
 export function hasLargerOriginal(item: MediaItem): boolean {
   if (item.kind !== 'image' || !item.originalWidth || !item.width) return false;
   return item.originalWidth > item.width;

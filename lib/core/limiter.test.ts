@@ -4,7 +4,7 @@ import { createLimiter } from './limiter';
 const tick = () => new Promise((r) => setTimeout(r, 0));
 
 describe('createLimiter', () => {
-  it('не запускает больше задач, чем разрешено', async () => {
+  it('does not run more tasks than allowed', async () => {
     const run = createLimiter(2);
     let active = 0;
     let peak = 0;
@@ -18,7 +18,7 @@ describe('createLimiter', () => {
     expect(peak).toBe(2);
   });
 
-  it('ошибка одной задачи не останавливает очередь', async () => {
+  it('one task failing does not stop the queue', async () => {
     const run = createLimiter(1);
     const failed = run(() => Promise.reject(new Error('boom')));
     const ok = run(async () => 'ok');

@@ -1,84 +1,84 @@
-# Media Saver — роадмап
+# Media Saver: roadmap
 
-Расширение для Chrome, которое скачивает медиа из соцсетей одним кликом, без лишних функций.
+A Chrome extension that downloads media from social networks in one click, with no extra features.
 
-## Принятые решения
+## Decisions
 
-- **Стек:** TypeScript + [WXT](https://wxt.dev), Manifest V3.
-- **Распространение:** сначала только для себя (ручная установка через режим разработчика). Публикацию в Chrome Web Store рассматриваем позже: при необходимости соберём отдельный вариант без того, что запрещено правилами стора (например, видео с YouTube). YouTube уже вынесен в отдельное расширение «Media Saver for YouTube» (`apps/youtube/`, `wxt.youtube.config.ts`), основное — без `nativeMessaging`.
-- **Архитектура:** общее ядро (UI-кнопка, скачивание, именование файлов) и по одному модулю-экстрактору на каждый сайт.
-- **Сохранение:** отдельные файлы, без ZIP, по шаблону `Загрузки/<site>/<author>/<id>_<n>.<ext>`.
-- **Instagram v1:** фото, карусели, видео/Reels, сторис и хайлайты.
-- **Источник данных Instagram — связка C + B + A:**
-  - **C (основной)** — пассивно перехватываем `fetch`/`XHR` и встроенный в HTML JSON. Это ноль дополнительных запросов и минимальный риск бана.
-  - **B (запасной)** — точечный запрос к API, только если в кэше нет данных.
-  - **A (последний рубеж)** — `src` картинки из DOM (`srcset` в ленте больше нет), только для фото.
-- **Качество фото — две кнопки:**
-  - **«Скачать»** — лучшее из уже загруженных данных, мгновенно, без запросов.
-  - **«Скачать оригинал»** — появляется, только если `original_width` больше лучшего доступного кандидата (в ленте фото обрезаны до 1080px). Работает так: открывает `/p/<code>/` в неактивной вкладке, читает встроенный JSON с полным списком кандидатов и закрывает вкладку. GraphQL с `doc_id` не используем, это хрупкий путь.
-  - На кнопке видно разрешение: «1080 / оригинал 3000».
-- **Карусели:** основная кнопка скачивает текущий слайд, рядом маленькая кнопка «Все N» скачивает все слайды поста. Данные всех слайдов уже есть в перехваченных данных, листать не нужно.
-- **Качество видео:** по умолчанию лучшее качество через DASH (склейка видео и звука через Mediabunny). Если склейка не удалась, автоматически скачиваем прогрессивный mp4 (обычно 720p).
-- **Безопасность аккаунта:** расширение само не открывает и не переключает сторис (это оставляет просмотры), скачивает только то, что пользователь уже смотрит.
-
----
-
-## Этап 0 — Фундамент
-
-- [x] **0.1 Каркас проекта.** WXT + TS, git, ESLint/Prettier, проверка установки через режим разработчика.
-- [x] **0.2 Контракт экстрактора.** Типы `MediaItem` (url, тип image/video, автор, id, индекс) и `PageDataParser` (разбор перехваченных данных страницы). Общий `SiteExtractor` с реестром убран: сайты слишком разные, у каждого свой content script, а общие части — в `lib/content/`.
-- [x] **0.3 Сервис скачивания (background).** Проверен в реальном Chrome вместе с кнопкой. `chrome.downloads`, шаблон имени, очистка недопустимых символов, очередь с ограничением параллельных загрузок.
-- [x] **0.4 UI-кнопка.** Для проверки временно подключена к постам ленты через DOM (только фото). Кнопка ⬇ при наведении в Shadow DOM, чтобы стили сайта на неё не влияли. Состояния: загрузка, готово, ошибка.
-- [x] **0.5 Контекстное меню.** Пункт «Скачать оригинал» на медиа.
-- [x] **0.6 Настройки (минимум).** Шаблон папки с предпросмотром, вкл/выкл «Сохранить как…», качество видео (DASH или совместимый mp4).
-
-## Этап 1 — Instagram
-
-- [x] **1.1 Изучить опенсорс.** IG Helper (как устроены запросы, поля и разметка), экстрактор Instagram из gallery-dl (эндпоинты, заголовки, паузы между запросами), SocialSnag (архитектура MV3). Выводы записать в `docs/instagram.md`. Код из GPL-проектов не копируем, берём только идеи.
-- [x] **1.2 Ресёрч на живых страницах.** Способ C подтверждён: транспорт — XHR, данные есть и во встроенном JSON. Хайлайты не проверены. Сверить выводы из 1.1 с реальностью: какие запросы и встроенный JSON приходят на посте, в ленте, в профиле, в Reels, сторис и хайлайтах. Дополнить `docs/instagram.md`.
-- [x] **1.3 Перехватчик (C).** Скрипт в `world: "MAIN"` на `document_start`: подмена `fetch`/`XHR`, разбор встроенного `<script type="application/json">`, рекурсивный поиск объектов с `image_versions2` и `video_versions`, кэш по shortcode и id. Передача данных в content script.
-- [x] **1.4 Выбор медиа.** Лучшее качество из `candidates` (площадь, затем самый короткий `stp`) и `video_versions`, разбор `carousel_media`, автор, расширение файла, pk из строкового `id`. Тесты на сохранённых JSON.
-- [x] **1.4b Видео в DASH-качестве (обязательно).** Прогрессивный mp4 ограничен 720p, а DASH даёт до 1440p. Разбор `video_dash_manifest` и склейка видео и аудио через Mediabunny в offscreen document.
-- [x] **1.5 Запасной API-клиент (B).** При промахе кэша — один запрос `/api/v1/media/{pk}/info/` из content script (pk из шорткода, App ID со страницы). Не чаще раза в 3 с, после 429 или `/challenge/` — пауза 10 минут. Если не вышло — видимое фото со страницы (A).
-- [x] **1.6 Страница поста и Reels** (`/p/…`, `/reel/…`): кнопка текущего слайда и кнопка «Все N».
-- [x] **1.7 Лента.** Кнопки на каждом посте (MutationObserver, учёт SPA-навигации), сопоставление кнопки с данными по ссылке `/p/<shortcode>/`.
-- [x] **1.8 Сетка профиля.** Кнопка на превью скачивает весь пост (и в «Ещё от автора», и в поиске).
-- [x] **1.9 Сторис.** Кнопка в шапке перед паузой; пост ищется по pk из URL, а если его нет — по имени файла картинки. Хайлайты: в URL нет pk элемента — фото ищутся по имени файла, видео по номеру в ленте (полоски прогресса) со сверкой длительности.
-- [x] **1.9a Кнопки в панелях действий Instagram.** Лента и пост — строка под медиа, Reels — колонка справа, сторис — шапка. Панели ищутся по структуре, а не по переводимым подписям. На плитках сеток — кнопка поверх превью.
-- [x] **1.9b «Скачать оригинал».** Кнопка «HD <ширина>» рядом с ⬇, только если `original_width` больше доступного. Background открывает `/p/<code>/` в неактивной вкладке, content script там отдаёт пост с полным списком размеров, вкладка закрывается (таймаут 20 с).
-- [x] **1.10 Надёжность.** Запасной путь A (фото из DOM) после API, текст ошибки виден внизу экрана, а не только в подсказке.
-- [x] **1.11 Чек-лист ручного тестирования.** [docs/checklist.md](docs/checklist.md), для всех сайтов.
-
-## Этап 2 — YouTube (отдельное расширение, только для себя)
-
-- [x] **2.1 Превью** в максимальном разрешении (`maxresdefault` → `sddefault` → `hqdefault`). Кнопка под роликом рядом с «Поделиться», в лентах и Shorts — правый клик по плитке.
-- [x] **2.2 Ресёрч видео.** Выбран yt-dlp через Native Messaging: веб-плеер YouTube на SABR с PO-токенами, из браузера ненадёжно. yt-dlp через Native Messaging (+ установщик хелпера для Windows) против чисто браузерного варианта. Принять решение.
-- [ ] **2.3 Реализация.** Готово: хелпер `native-host/` (Node), установка `install.ps1`, кнопка «Видео» с процентами, качество из настроек. Хелпер проверен с настоящим yt-dlp 2026.10.26 (ролик скачан, H.264 + AAC). Проверено из Chrome на ролике и Shorts (кнопки «Видео» и «Превью» в колонке Shorts). Папка — адрес канала `@handle` и для видео, и для превью. «Только аудио» не нужно.
-
-## Этап 3 — Другие соцсети
-
-Каждая — отдельный экстрактор, порядок определим позже.
-
-- [x] X / Twitter — фото в оригинале (`name=orig`), видео и GIF (лучший mp4). Перехват GraphQL-ответов, кнопка в строке действий твита, контекстное меню.
-- [ ] Pinterest — оригиналы пинов
-- [ ] Reddit — картинки, галереи, видео (звук идёт отдельно)
-- [x] TikTok — видео (лучшее, обычно 1080p H.265, или H.264 в «совместимом» режиме) и фото-посты. Кнопка в колонке справа от ролика, плитки профиля, контекстное меню. Видео качает сама страница (CDN требует cookie и Referer сайта), расширение сохраняет файл через offscreen.
-- [x] LinkedIn — фото из постов ленты (по разметке: в новой ленте нет id постов и JSON). Кнопка в строке действий после «Отправить», папка — автор поста.
-- [x] LinkedIn — видео: лучший mp4 из источников плеера video.js (H.264 + AAC, до 720p, качается без cookie). Источники видны только в JS страницы — их отдаёт скрипт в MAIN world.
-
-## Этап 4 — Публикация (опционально)
-
-- [x] Вариант сборки для стора без запрещённого функционала: YouTube — отдельное расширение, `npm run zip:store` без `key`
-- [x] Аудит разрешений, обоснования для формы стора ([docs/store.md](docs/store.md))
-- [ ] Название без чужих брендов, иконки, скриншоты
-- [ ] Политика конфиденциальности — текст готов ([docs/privacy.md](docs/privacy.md)), осталось опубликовать по публичному адресу
+- **Stack:** TypeScript + [WXT](https://wxt.dev), Manifest V3.
+- **Distribution:** at first for personal use only (manual install through developer mode). Publishing to the Chrome Web Store comes later: if needed, a separate build without what the store rules forbid (e.g. YouTube video). YouTube already lives in a separate extension, "Media Saver for YouTube" (`apps/youtube/`, `wxt.youtube.config.ts`); the main one has no `nativeMessaging`.
+- **Architecture:** a shared core (UI button, downloading, file naming) and one extractor module per site.
+- **Saving:** separate files, no ZIP, with the template `Downloads/<site>/<author>/<id>_<n>.<ext>`.
+- **Instagram v1:** photos, carousels, videos/Reels, stories and highlights.
+- **Instagram data source, the C + B + A combination:**
+  - **C (main):** passively intercept `fetch`/`XHR` and the JSON embedded in the HTML. Zero extra requests and minimal ban risk.
+  - **B (fallback):** a targeted API request, only when the cache has no data.
+  - **A (last resort):** the image `src` from the DOM (the feed no longer has `srcset`), photos only.
+- **Photo quality, two buttons:**
+  - **"Download":** the best of the already loaded data, instant, no requests.
+  - **"Download original":** appears only if `original_width` is larger than the best available candidate (feed photos are cut to 1080px). It opens `/p/<code>/` in an inactive tab, reads the embedded JSON with the full candidate list and closes the tab. GraphQL with `doc_id` isn't used, it's a fragile path.
+  - The button shows the resolution: "1080 / original 3000".
+- **Carousels:** the main button downloads the current slide, a small "All N" button next to it downloads all slides of the post. Data for all slides is already in the intercepted data, no need to swipe.
+- **Video quality:** best quality by default through DASH (video and audio muxed with Mediabunny). If muxing fails, the progressive mp4 (usually 720p) is downloaded automatically.
+- **Account safety:** the extension never opens or switches stories by itself (that leaves views); it only downloads what the user is already watching.
 
 ---
 
-## Справочные проекты
+## Stage 0: Foundation
 
-- [IG Helper](https://github.com/SN-Koarashi/ig-helper) — userscript для Instagram, GPL-3.0 (только как справочник)
-- [gallery-dl](https://github.com/mikf/gallery-dl) — экстракторы для Instagram, X, Pinterest, Reddit и др., GPL-2.0 (только как справочник)
-- [SocialSnag](https://github.com/jamditis/socialsnag) — MV3-расширение для Instagram и X, MIT
-- [mihaip/instagram-downloader](https://github.com/mihaip/instagram-downloader) — пример с минимальными разрешениями
-- [yt-dlp](https://github.com/yt-dlp/yt-dlp) — для этапа 2 (YouTube)
+- [x] **0.1 Project skeleton.** WXT + TS, git, ESLint/Prettier, install check through developer mode.
+- [x] **0.2 Extractor contract.** `MediaItem` types (url, image/video type, author, id, index) and `PageDataParser` (parsing intercepted page data). The shared `SiteExtractor` with a registry was removed: the sites are too different, each has its own content script, and the shared parts are in `lib/content/`.
+- [x] **0.3 Download service (background).** Tested in real Chrome together with the button. `chrome.downloads`, name template, cleaning invalid characters, a queue limiting parallel downloads.
+- [x] **0.4 UI button.** For testing it was temporarily attached to feed posts through the DOM (photos only). A ⬇ button on hover in Shadow DOM so site styles don't affect it. States: loading, done, error.
+- [x] **0.5 Context menu.** A "Download original" item on media.
+- [x] **0.6 Settings (minimum).** Folder template with a preview, "Save as…" on/off, video quality (DASH or compatible mp4).
+
+## Stage 1: Instagram
+
+- [x] **1.1 Study open source.** IG Helper (how requests, fields and markup work), the Instagram extractor of gallery-dl (endpoints, headers, pauses between requests), SocialSnag (MV3 architecture). Findings go into `docs/instagram.md`. No code is copied from GPL projects, only ideas.
+- [x] **1.2 Research on live pages.** Method C confirmed: the transport is XHR, and the data is in the embedded JSON too. Highlights not checked. Check the findings of 1.1 against reality: which requests and embedded JSON arrive on a post, in the feed, on a profile, in Reels, stories and highlights. Update `docs/instagram.md`.
+- [x] **1.3 Interceptor (C).** A script in `world: "MAIN"` at `document_start`: patching `fetch`/`XHR`, parsing the embedded `<script type="application/json">`, recursive search for objects with `image_versions2` and `video_versions`, a cache by shortcode and id. Passing data to the content script.
+- [x] **1.4 Choosing media.** The best quality from `candidates` (area, then the shortest `stp`) and `video_versions`, parsing `carousel_media`, author, file extension, pk from the string `id`. Tests on saved JSON.
+- [x] **1.4b DASH-quality video (required).** The progressive mp4 is limited to 720p, while DASH goes up to 1440p. Parsing `video_dash_manifest` and muxing video and audio with Mediabunny in an offscreen document.
+- [x] **1.5 Fallback API client (B).** On a cache miss, one `/api/v1/media/{pk}/info/` request from the content script (pk from the shortcode, App ID from the page). At most once every 3 s, after a 429 or `/challenge/` a 10-minute pause. If that fails, the visible photo from the page (A).
+- [x] **1.6 Post page and Reels** (`/p/…`, `/reel/…`): a current-slide button and an "All N" button.
+- [x] **1.7 Feed.** Buttons on every post (MutationObserver, handling SPA navigation), matching the button to the data by the `/p/<shortcode>/` link.
+- [x] **1.8 Profile grid.** A button on the preview downloads the whole post (also in "More from" and in search).
+- [x] **1.9 Stories.** A button in the header before pause; the post is found by the pk from the URL, or if there isn't one, by the image file name. Highlights: the URL has no item pk, so photos are found by file name and videos by their position in the reel (progress bars) with a duration check.
+- [x] **1.9a Buttons in Instagram's action bars.** Feed and post: the row under the media; Reels: the column on the right; stories: the header. Bars are found by structure, not by translated labels. Grid tiles get a button over the preview.
+- [x] **1.9b "Download original".** An "HD <width>" button next to ⬇, only if `original_width` is larger than the available one. The background opens `/p/<code>/` in an inactive tab, the content script there hands over the post with the full list of sizes, the tab is closed (20 s timeout).
+- [x] **1.10 Reliability.** Fallback A (photo from the DOM) after the API, the error text is shown at the bottom of the screen, not only in the tooltip.
+- [x] **1.11 Manual testing checklist.** [docs/checklist.md](docs/checklist.md), for all sites.
+
+## Stage 2: YouTube (separate extension, personal use only)
+
+- [x] **2.1 Thumbnails** in maximum resolution (`maxresdefault` → `sddefault` → `hqdefault`). A button under the video next to Share; in feeds and Shorts, right-click a tile.
+- [x] **2.2 Video research.** yt-dlp through Native Messaging was chosen: YouTube's web player uses SABR with PO tokens, unreliable from the browser. yt-dlp through Native Messaging (+ a helper installer for Windows) versus a pure browser approach. Decide.
+- [ ] **2.3 Implementation.** Done: the `native-host/` helper (Node), the `install.ps1` installer, a "Video" button with percentages, quality from the settings. The helper was tested with real yt-dlp 2026.10.26 (video downloaded, H.264 + AAC). Tested from Chrome on a video and Shorts ("Video" and "Thumbnail" buttons in the Shorts column). The folder is the channel handle `@handle` for both videos and thumbnails. "Audio only" isn't needed.
+
+## Stage 3: Other social networks
+
+Each one is a separate extractor, the order will be decided later.
+
+- [x] X / Twitter: photos in original size (`name=orig`), videos and GIFs (the best mp4). Intercepting GraphQL responses, a button in the tweet's action row, the context menu.
+- [ ] Pinterest: pin originals
+- [ ] Reddit: images, galleries, videos (audio comes separately)
+- [x] TikTok: videos (the best, usually 1080p H.265, or H.264 in "compatible" mode) and photo posts. A button in the column to the right of the video, profile tiles, the context menu. Videos are downloaded by the page itself (the CDN needs the site's cookies and Referer), the extension saves the file through offscreen.
+- [x] LinkedIn: photos from feed posts (by markup: the new feed has no post ids or JSON). A button in the action row after Send, the folder is the post author.
+- [x] LinkedIn: videos, the best mp4 from the video.js player sources (H.264 + AAC, up to 720p, downloads without cookies). The sources are visible only to the page's JS, so a MAIN world script hands them over.
+
+## Stage 4: Publishing (optional)
+
+- [x] A store build without forbidden features: YouTube is a separate extension, `npm run zip:store` without `key`
+- [x] Permission audit, justifications for the store form ([docs/store.md](docs/store.md))
+- [x] A name without other brands, icons, screenshots (`store-assets/`)
+- [x] Privacy policy ([docs/privacy.md](docs/privacy.md)), published at a public URL
+
+---
+
+## Reference projects
+
+- [IG Helper](https://github.com/SN-Koarashi/ig-helper): an Instagram userscript, GPL-3.0 (reference only)
+- [gallery-dl](https://github.com/mikf/gallery-dl): extractors for Instagram, X, Pinterest, Reddit and more, GPL-2.0 (reference only)
+- [SocialSnag](https://github.com/jamditis/socialsnag): an MV3 extension for Instagram and X, MIT
+- [mihaip/instagram-downloader](https://github.com/mihaip/instagram-downloader): an example with minimal permissions
+- [yt-dlp](https://github.com/yt-dlp/yt-dlp): for stage 2 (YouTube)

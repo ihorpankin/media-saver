@@ -2,18 +2,18 @@ import type { MediaPost } from '@/lib/core/media';
 import { parseInstagram, pkFromShortcode } from './parse';
 
 /*
- * Запасной путь (B): один запрос к REST Instagram, когда поста нет в кэше перехватчика.
- * Сам Instagram ходит в `/api/v1/media/{pk}/info/`, когда открываешь пост кликом, поэтому
- * для сайта это обычный трафик. Работает в content script: запрос с того же origin,
- * cookie сессии уходят сами.
+ * Fallback (B): one request to Instagram's REST API when the post isn't in the interceptor cache.
+ * Instagram itself calls `/api/v1/media/{pk}/info/` when you open a post with a click, so
+ * for the site this is regular traffic. Runs in the content script: the request is same-origin,
+ * session cookies go along by themselves.
  *
- * Бережём аккаунт: только по клику, не чаще раза в MIN_INTERVAL, а после 429 или проверки
- * на бота (`/challenge/`) — пауза на COOLDOWN, без запросов вообще.
+ * Protecting the account: only on click, at most once per MIN_INTERVAL, and after a 429 or a bot
+ * check (`/challenge/`) a COOLDOWN pause with no requests at all.
  */
 
 const MIN_INTERVAL = 3_000;
 const COOLDOWN = 10 * 60_000;
-/** Публичный id веб-клиента Instagram; на случай, если на странице его не найдём. */
+/** Public id of Instagram's web client, in case it isn't found on the page. */
 const DEFAULT_APP_ID = '936619743392459';
 
 let queue: Promise<unknown> = Promise.resolve();
@@ -55,8 +55,8 @@ async function request(pk: string): Promise<unknown> {
 }
 
 /**
- * Пост по шорткоду или pk (у сторис в адресе pk). Запросы идут по одному, даже если
- * пользователь нажал несколько кнопок подряд.
+ * A post by shortcode or pk (stories have the pk in the URL). Requests go one at a time even if
+ * the user pressed several buttons in a row.
  */
 export function fetchPost(id: string): Promise<MediaPost> {
   const pk = /^\d+$/.test(id) ? id : pkFromShortcode(id);

@@ -7,7 +7,7 @@ import {
   shortcodeFromPk,
 } from './parse';
 
-// Структуры повторяют реальные ответы (см. docs/instagram.md), значения выдуманы
+// Structures mirror real responses (see docs/instagram.md), the values are made up
 const cdn = (name: string, stp: string) =>
   `https://scontent-waw2-1.cdninstagram.com/v/t51/${name}.jpg?stp=${stp}&oh=x`;
 
@@ -62,7 +62,7 @@ const carouselPost = {
 };
 
 const reel = {
-  // eslint-disable-next-line no-loss-of-precision -- так и бывает в ответах: точность уже потеряна
+  // eslint-disable-next-line no-loss-of-precision -- that's how responses are: the precision is already lost
   pk: 4020951276420053625,
   id: '4020951276420053625_4484906660',
   code: 'DfNSeHKK7p5',
@@ -72,7 +72,7 @@ const reel = {
   image_versions2: {
     candidates: [{ url: cdn('reel-poster', 'dst-jpg'), width: 720, height: 1280 }],
   },
-  // В Reels у video_versions нет размеров
+  // In Reels video_versions have no sizes
   video_versions: [
     { url: 'https://scontent.cdninstagram.com/v/reel-a.mp4', type: 101 },
     { url: 'https://scontent.cdninstagram.com/v/reel-b.mp4', type: 102 },
@@ -91,7 +91,7 @@ const story = {
   },
 };
 
-// Лента: data.xdt_api__v1__feed__timeline__connection.edges[].node.media
+// Feed: data.xdt_api__v1__feed__timeline__connection.edges[].node.media
 const feedResponse = {
   data: {
     xdt_api__v1__feed__timeline__connection: {
@@ -101,7 +101,7 @@ const feedResponse = {
 };
 
 describe('parseInstagram', () => {
-  it('карусель: все слайды одним постом, лучшее качество', () => {
+  it('carousel: all slides as one post, best quality', () => {
     const [post] = parseInstagram(feedResponse);
     expect(post).toMatchObject({
       postId: 'DfM_W2rE0Dp',
@@ -128,7 +128,7 @@ describe('parseInstagram', () => {
     });
   });
 
-  it('Reels: pk из строкового id, видео без размеров, ссылка /reel/', () => {
+  it('Reels: pk from the string id, video without sizes, /reel/ link', () => {
     const posts = parseInstagram(feedResponse);
     expect(posts).toHaveLength(2);
     expect(posts[1]).toMatchObject({
@@ -142,7 +142,7 @@ describe('parseInstagram', () => {
     });
   });
 
-  it('сторис: ключ — pk, ссылка на сторис', () => {
+  it('stories: the key is the pk, link to the story', () => {
     const [post] = parseInstagram({ items: [story] });
     expect(post).toMatchObject({
       postId: '4021364098265521376',
@@ -150,19 +150,19 @@ describe('parseInstagram', () => {
     });
   });
 
-  it('встроенный JSON со вложенными обёртками', () => {
+  it('embedded JSON with nested wrappers', () => {
     const inline = {
       require: [['x', 'y', null, [{ __bbox: { result: { data: { a: { items: [story] } } } } }]]],
     };
     expect(parseInstagram(inline)).toHaveLength(1);
   });
 
-  it('видео без video_versions не превращается в обложку', () => {
+  it('a video without video_versions does not turn into its cover', () => {
     const coverOnly = { ...reel, video_versions: null };
     expect(parseInstagram({ items: [coverOnly] })).toEqual([]);
   });
 
-  it('ответ API, вложенный строкой (первая порция Explore)', () => {
+  it('API response nested as a string (first batch of Explore)', () => {
     const inline = {
       require: [
         {
@@ -173,7 +173,7 @@ describe('parseInstagram', () => {
     expect(parseInstagram(inline).map((p) => p.postId)).toEqual(['4021364098265521376']);
   });
 
-  it('хайлайт: номер истории в ленте', () => {
+  it('highlight: story number in the reel', () => {
     const highlight = {
       data: {
         xdt_api__v1__feed__reels_media__connection: {
@@ -196,14 +196,14 @@ describe('parseInstagram', () => {
     expect(posts[1]!.items[0]!.duration).toBe(5);
   });
 
-  it('JSON без медиа', () => {
+  it('JSON without media', () => {
     expect(parseInstagram({ data: { viewer: { id: '1' } } })).toEqual([]);
     expect(parseInstagram(null)).toEqual([]);
   });
 });
 
 describe('bestCandidate', () => {
-  it('при равной площади предпочитает короткий stp', () => {
+  it('prefers a shorter stp at equal area', () => {
     const best = bestCandidate([
       { url: cdn('a', 'dst-jpg_e35_s1080x1080_sh2.08_tt6'), width: 1080, height: 1080 },
       { url: cdn('b', 'dst-jpg_e35_tt6'), width: 1080, height: 1080 },
@@ -213,13 +213,13 @@ describe('bestCandidate', () => {
 });
 
 describe('shortcodeFromPk', () => {
-  it('переводит pk в шорткод', () => {
+  it('converts pk to shortcode', () => {
     expect(shortcodeFromPk('4020867214798438633')).toBe('DfM_W2rE0Dp');
   });
 });
 
 describe('shouldParse', () => {
-  it('только API Instagram', () => {
+  it('only the Instagram API', () => {
     expect(instagramPageParser.shouldParse('https://www.instagram.com/graphql/query')).toBe(true);
     expect(instagramPageParser.shouldParse('/api/graphql')).toBe(true);
     expect(instagramPageParser.shouldParse('/api/v1/media/1/info/')).toBe(true);
@@ -228,12 +228,12 @@ describe('shouldParse', () => {
 });
 
 describe('pkFromShortcode', () => {
-  it('обратно к shortcodeFromPk', () => {
+  it('round-trips with shortcodeFromPk', () => {
     expect(pkFromShortcode('DfM_W2rE0Dp')).toBe('4020867214798438633');
     expect(shortcodeFromPk(pkFromShortcode('B'))).toBe('B');
   });
 
-  it('хвост закрытого поста отбрасывается, мусор — ошибка', () => {
+  it('drops the tail of a private post, garbage is an error', () => {
     expect(pkFromShortcode('DfM_W2rE0DpAbCdEfGhIjKlMnOpQrStUvWxYz')).toBe('4020867214798438633');
     expect(() => pkFromShortcode('Df.W')).toThrow();
   });

@@ -1,15 +1,15 @@
 import type { MediaPost } from './media';
 
 /*
- * Расширение состоит из трёх частей, которые общаются сообщениями:
+ * The extension has three parts that talk through messages:
  *
- *   страница (MAIN world) ──window.postMessage──▶ content script ──runtime.sendMessage──▶ background
- *   перехват XHR/fetch                            кнопки, кэш постов                       chrome.downloads
+ *   page (MAIN world) ──window.postMessage──▶ content script ──runtime.sendMessage──▶ background
+ *   XHR/fetch interception                    buttons, post cache                     chrome.downloads
  */
 
-// ---- Страница → content script (window.postMessage) ----
+// ---- Page → content script (window.postMessage) ----
 
-/** Метка, по которой content script отличает наши сообщения от чужих. */
+/** The tag the content script uses to tell our messages from others. */
 export const PAGE_CHANNEL = 'media-saver:page';
 
 export interface PagePostsMessage {
@@ -29,8 +29,8 @@ export function isPageMessage(data: unknown): data is PageMessage {
 }
 
 /**
- * LinkedIn: content script спрашивает у страницы источники видеоплеера событием на элементе
- * плеера, страница отвечает JSON-массивом ссылок на mp4 в его атрибуте.
+ * LinkedIn: the content script asks the page for the video player's sources with an event on the player
+ * element, and the page answers with a JSON array of mp4 links in its attribute.
  */
 export const LINKEDIN_SOURCES_EVENT = 'media-saver:linkedin-sources';
 export const LINKEDIN_SOURCES_ATTR = 'data-media-saver-sources';
@@ -40,50 +40,50 @@ export const LINKEDIN_SOURCES_ATTR = 'data-media-saver-sources';
 export interface DownloadRequest {
   type: 'download';
   post: MediaPost;
-  /** Какие элементы скачать (значения `MediaItem.index`). Без поля — все. */
+  /** Which items to download (`MediaItem.index` values). Without the field, all of them. */
   indexes?: number[];
 }
 
 /**
- * Скачать оригинал. В ленте фото обрезаны до 1080px, а полный список размеров есть
- * только на странице поста — background открывает её в фоновой вкладке и забирает данные.
+ * Download the original. In the feed photos are cut to 1080px, and the full list of sizes is
+ * only on the post page: the background opens it in a background tab and takes the data.
  */
 export interface OriginalRequest {
   type: 'download-original';
-  /** Пост, как он есть в кэше страницы: из него берутся имя файла и номер. */
+  /** The post as it is in the page cache: the file name and number come from it. */
   post: MediaPost;
   index: number;
 }
 
-/** Content script спрашивает при загрузке: не открыт ли он ради оригинала? */
+/** The content script asks on load: was it opened for an original? */
 export interface HarvestCheckRequest {
   type: 'harvest-check';
 }
 
-/** Ответ на `harvest-check`: шорткод поста, данные которого нужно вернуть, или `null`. */
+/** Answer to `harvest-check`: the shortcode of the post whose data to return, or `null`. */
 export type HarvestCheckResponse = { postId: string } | null;
 
-/** Фоновая вкладка отдаёт полные данные поста. */
+/** The background tab hands over the full post data. */
 export interface HarvestResultRequest {
   type: 'harvest-result';
   post: MediaPost;
 }
 
-/** Скачать превью ролика YouTube в максимальном разрешении. */
+/** Download a YouTube video thumbnail in maximum resolution. */
 export interface YoutubeThumbnailRequest {
   type: 'youtube-thumbnail';
   videoId: string;
-  /** Название канала — для папки. */
+  /** Channel name, for the folder. */
   author?: string;
 }
 
-/** Скачать ролик YouTube через yt-dlp. Ответ — DownloadResponse, прогресс — YoutubeProgressMessage. */
+/** Download a YouTube video with yt-dlp. The answer is a DownloadResponse, progress a YoutubeProgressMessage. */
 export interface YoutubeVideoRequest {
   type: 'youtube-video';
   url: string;
 }
 
-/** Background → вкладка: сколько процентов ролика скачано. */
+/** Background → tab: how many percent of the video are downloaded. */
 export interface YoutubeProgressMessage {
   type: 'youtube-progress';
   url: string;
@@ -91,8 +91,8 @@ export interface YoutubeProgressMessage {
 }
 
 /**
- * Файл, который скачала сама страница: CDN TikTok пускает к видео надёжно только с cookie
- * и Referer сайта, а у chrome.downloads Referer нет. Байты — base64, background сохраняет.
+ * A file downloaded by the page itself: TikTok's CDN reliably lets video through only with the site's cookies
+ * and Referer, and chrome.downloads has no Referer. Bytes are base64, the background saves them.
  */
 export interface BytesDownloadRequest {
   type: 'download-bytes';
@@ -115,18 +115,18 @@ export type BackgroundRequest =
 
 export type DownloadMode = 'slide' | 'all' | 'original';
 
-/** Пункт «Скачать» в контекстном меню: скачать медиа, на котором кликнули правой кнопкой. */
+/** The "Download" context menu item: download the media that was right-clicked. */
 export interface ContextDownloadRequest {
   type: 'context-download';
-  /** Что скачать: текущий слайд, весь пост или оригинал текущего фото. */
+  /** What to download: the current slide, the whole post or the original of the current photo. */
   mode: DownloadMode;
-  /** Адрес медиа из меню. У видео это blob-ссылка — по ней не скачать, нужен пост. */
+  /** Media URL from the menu. For a video it's a blob URL that can't be downloaded, so the post is needed. */
   srcUrl?: string;
 }
 
 // ---- Background → offscreen document (runtime.sendMessage) ----
 
-/** Скачать дорожки DASH и склеить в один mp4. Ответ — blob-ссылка на результат. */
+/** Download DASH tracks and mux them into one mp4. The answer is a blob URL to the result. */
 export interface MuxRequest {
   type: 'offscreen-mux';
   videoUrl: string;
@@ -135,13 +135,13 @@ export interface MuxRequest {
 
 export type MuxResponse = { url: string } | { error: string };
 
-/** Освободить blob-ссылку после того, как файл скачался. */
+/** Release a blob URL after the file has downloaded. */
 export interface RevokeRequest {
   type: 'offscreen-revoke';
   url: string;
 }
 
-/** Превратить скачанные страницей байты (base64) в blob-ссылку для chrome.downloads. */
+/** Turn bytes downloaded by the page (base64) into a blob URL for chrome.downloads. */
 export interface BlobRequest {
   type: 'offscreen-blob';
   data: string;
@@ -150,10 +150,10 @@ export interface BlobRequest {
 
 export type OffscreenRequest = MuxRequest | RevokeRequest | BlobRequest;
 
-/** Ответ приходит, когда все файлы скачались или упали. */
+/** The answer comes when all files have downloaded or failed. */
 export interface DownloadResponse {
-  /** Сколько файлов скачано. */
+  /** How many files were downloaded. */
   completed: number;
-  /** Ошибки по файлам, пустой массив — всё хорошо. */
+  /** Per-file errors; an empty array means all is well. */
   errors: Array<{ index: number; error: string }>;
 }

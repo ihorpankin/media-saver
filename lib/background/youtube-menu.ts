@@ -4,14 +4,14 @@ import { QUALITY, updateSettings } from './context-menu';
 import { downloadThumbnail } from './youtube';
 
 /*
- * Контекстное меню расширения для YouTube:
+ * The extension's context menu for YouTube:
  *
- *   Media Saver for YouTube ▸ Скачать превью
+ *   Media Saver for YouTube ▸ Download thumbnail
  *                             ──────────
- *                             ◉ Видео: лучшее качество
- *                             ○ Видео: совместимое (720p, H.264)
+ *                             ◉ Video: best quality
+ *                             ○ Video: compatible (720p, H.264)
  *
- * Превью — по правому клику на плитке в любой ленте или на странице ролика.
+ * Thumbnail: right-click a tile in any feed or on the video page.
  */
 
 const ROOT = 'media-saver-youtube';
@@ -53,7 +53,7 @@ export function setupYoutubeMenu() {
   browser.contextMenus.onClicked.addListener((info) => {
     const id = String(info.menuItemId);
     if (id === THUMBNAIL) {
-      // Плитка ролика — ссылка на него; если кликнули не по плитке, берём ролик со страницы
+      // A video tile is a link to it; if the click wasn't on a tile, take the video of the page
       const videoId =
         videoIdFromUrl(info.linkUrl) ?? videoIdFromUrl(info.srcUrl) ?? videoIdFromUrl(info.pageUrl);
       if (videoId) {

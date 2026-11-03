@@ -2,24 +2,24 @@ import type { ContextDownloadRequest, DownloadMode } from '@/lib/core/messages';
 import { loadSettings, settingsItem, type Settings } from '@/lib/core/settings';
 
 /*
- * Контекстное меню по правому клику в Instagram:
+ * Right-click context menu on Instagram:
  *
- *   Media Saver ▸ Скачать
- *                 Скачать весь пост
- *                 Скачать оригинал (HD)
+ *   Media Saver ▸ Download
+ *                 Download whole post
+ *                 Download original (HD)
  *                 ──────────
- *                 ◉ Видео: лучшее качество
- *                 ○ Видео: совместимое (720p, H.264)
- *                 ☐ Спрашивать, куда сохранить
+ *                 ◉ Video: best quality
+ *                 ○ Video: compatible (720p, H.264)
+ *                 ☐ Ask where to save
  *                 ──────────
- *                 Все настройки…
+ *                 Settings…
  *
- * Кроме 'image' и 'video' нужен контекст 'page': поверх фото Instagram кладёт прозрачный слой,
- * и Chrome считает такой клик кликом по странице. Что под курсором, разбирает content script.
+ * Besides 'image' and 'video' the 'page' context is needed: Instagram puts a transparent layer over photos,
+ * and Chrome treats such a click as a click on the page. The content script works out what's under the cursor.
  */
 
 const ROOT = 'media-saver';
-// Сайты, где работает подменю «Media Saver ▸ Скачать…»: у их content script есть обработчик
+// Sites where the "Media Saver ▸ Download…" submenu works: their content script has a handler
 const PAGES = [
   '*://*.instagram.com/*',
   '*://x.com/*',
@@ -81,7 +81,7 @@ async function build() {
   });
 }
 
-/** Отметки в меню отражают настройки, даже если их поменяли на странице настроек. */
+/** Menu checkmarks reflect the settings even if they were changed on the settings page. */
 function syncChecks(settings: Settings) {
   for (const [id, value] of QUALITY) {
     void browser.contextMenus.update(id, { checked: settings.videoQuality === value });
@@ -94,7 +94,7 @@ export async function updateSettings(patch: Partial<Settings>) {
 }
 
 export function setupContextMenu() {
-  // Пункты переживают перезапуск браузера, но при установке и обновлении создаём заново
+  // Items survive a browser restart, but are recreated on install and update
   browser.runtime.onInstalled.addListener(() => void build());
   settingsItem.watch((settings) => settings && syncChecks({ ...settings }));
 
@@ -103,7 +103,7 @@ export function setupContextMenu() {
 
     const download = DOWNLOADS.find(([itemId]) => itemId === id);
     if (download && tab?.id !== undefined) {
-      // Что именно скачивать, знает content script: у него данные постов и кнопки
+      // What exactly to download is known to the content script: it has the post data and the buttons
       const request: ContextDownloadRequest = {
         type: 'context-download',
         mode: download[1],

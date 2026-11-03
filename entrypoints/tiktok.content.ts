@@ -10,13 +10,13 @@ import {
 import { loadSettings } from '@/lib/core/settings';
 import { attachOverlayButton, createInlineButton, triggerDownload } from '@/lib/ui/download-button';
 
-// TikTok: кнопка ⬇ в колонке справа от ролика (аватар, лайк, комментарии, избранное,
-// поделиться) — в «Для вас», на странице ролика и в «Подписках». На плитках профиля —
-// кнопка поверх превью. Данные роликов приходят от перехватчика (tiktok-page.content.ts).
+// TikTok: the ⬇ button in the column to the right of the video (avatar, like, comments, favorites,
+// share) in For You, on the video page and in Following. On profile tiles the button
+// sits over the preview. Video data comes from the interceptor (tiktok-page.content.ts).
 
 const cache = createPostCache();
 
-/** Содержимое ответа в base64 — так байты проходят через сообщения расширения. */
+/** Response body in base64: that's how bytes pass through extension messages. */
 async function toBase64(blob: Blob): Promise<string> {
   const dataUrl = await new Promise<string>((resolve, reject) => {
     const reader = new FileReader();
@@ -28,8 +28,8 @@ async function toBase64(blob: Blob): Promise<string> {
 }
 
 /**
- * Видео качаем отсюда, со страницы: CDN TikTok стабильно отдаёт файл только запросу с cookie
- * и Referer сайта (у chrome.downloads Referer нет — файл приходит страницей ошибки).
+ * Videos are downloaded from here, the page: TikTok's CDN reliably serves the file only to a request with
+ * the site's cookies and Referer (chrome.downloads has no Referer, so the file comes back as an error page).
  */
 async function downloadVideo(post: MediaPost, item: MediaItem) {
   const { videoQuality } = await loadSettings();
@@ -67,17 +67,17 @@ async function download(postId: string) {
   if (!post) throw new Error('no data for this video — scroll the feed or reload the page');
   const video = post.items.find((item) => item.kind === 'video');
   if (video) return downloadVideo(post, video);
-  // Фото-пост: картинки с tiktokcdn отдаются и обычному скачиванию
+  // Photo post: images from tiktokcdn download fine with a regular download too
   const request: DownloadRequest = { type: 'download', post };
   await requestDownload(request);
 }
 
-/** id ролика в карточке ленты: у плеера id вида `xgwrapper-0-<id>`. */
+/** Video id in a feed card: the player has an id like `xgwrapper-0-<id>`. */
 function videoIdOf(card: Element): string | undefined {
   return card.querySelector('[id^="xgwrapper-"]')?.id.match(/(\d{15,})$/)?.[1];
 }
 
-/** Ленты: кнопка после «поделиться», в стиле соседних кнопок колонки. */
+/** Feeds: the button after Share, styled like the neighboring buttons in the column. */
 function scanFeed() {
   for (const card of document.querySelectorAll(
     'article[data-e2e="recommend-list-item-container"]',
@@ -92,7 +92,7 @@ function scanFeed() {
       label: 'Download',
       onClick: () => download(postId),
     });
-    // Цвет иконки и фон кружка — как у «поделиться», чтобы совпасть с темой TikTok
+    // Icon color and circle background as in Share, to match TikTok's theme
     host.style.color = getComputedStyle(share).color;
     const circle = [...share.querySelectorAll<HTMLElement>('*')].find(
       (el) => getComputedStyle(el).borderRadius === '9999px',
@@ -108,7 +108,7 @@ function scanFeed() {
   }
 }
 
-/** Плитки профиля, поиска и «Похожих»: кнопка поверх превью. */
+/** Profile, search and "Related" tiles: the button over the preview. */
 function scanTiles() {
   for (const tile of document.querySelectorAll<HTMLAnchorElement>(
     'a[href*="/video/"], a[href*="/photo/"]',
@@ -121,7 +121,7 @@ function scanTiles() {
   }
 }
 
-// ---- Контекстное меню: нажимаем ⬇ ролика, на котором кликнули ----
+// ---- Context menu: press ⬇ of the video that was clicked ----
 
 let contextTarget: Element | undefined;
 

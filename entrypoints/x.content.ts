@@ -9,19 +9,19 @@ import {
 import { originalPhotoUrl } from '@/lib/sites/x/parse';
 import { createInlineButton, triggerDownload } from '@/lib/ui/download-button';
 
-// X (Twitter): кнопка ⬇ в строке действий под твитом — «ответить, репост, лайк, просмотры,
-// закладка, поделиться». Скачивает все фото и видео твита в оригинальном размере.
-// Данные твитов приходят от перехватчика (x-page.content.ts); без них — фото прямо из DOM.
+// X (Twitter): the ⬇ button in the action row under a tweet: "reply, repost, like, views,
+// bookmark, share". Downloads all photos and videos of the tweet at original size.
+// Tweet data comes from the interceptor (x-page.content.ts); without it, photos straight from the DOM.
 
 const cache = createPostCache();
 
-/** id твита из ссылки на него: у времени публикации она ведёт на `/<user>/status/<id>`. */
+/** Tweet id from the link to it: the timestamp links to `/<user>/status/<id>`. */
 function tweetIdOf(article: Element): string | undefined {
   const link = article.querySelector('a[href*="/status/"] time')?.closest('a');
   return link?.getAttribute('href')?.match(/\/status\/(\d+)/)?.[1];
 }
 
-/** Запасной путь: фото твита прямо со страницы. Цитируемый твит внутри пропускаем. */
+/** Fallback: the tweet's photos straight from the page. A quoted tweet inside is skipped. */
 function postFromDom(article: Element, postId: string): MediaPost {
   const images = [...article.querySelectorAll<HTMLImageElement>('img[src*="pbs.twimg.com/media/"]')]
     .filter((img) => !img.closest('[role="link"]:not(article)'))
@@ -33,7 +33,7 @@ function postFromDom(article: Element, postId: string): MediaPost {
     ?.getAttribute('href')
     ?.split('/')[1];
   const items: MediaItem[] = images.map((src, i) => {
-    // `…/media/<id>?format=jpg&name=small` → `…/media/<id>.jpg` → оригинал
+    // `…/media/<id>?format=jpg&name=small` → `…/media/<id>.jpg` → original
     const u = new URL(src);
     const { url, ext } = originalPhotoUrl(
       `${u.origin}${u.pathname}.${u.searchParams.get('format') ?? 'jpg'}`,
@@ -58,14 +58,14 @@ function hasMedia(article: Element): boolean {
 function scan() {
   for (const article of document.querySelectorAll('article[data-testid="tweet"]')) {
     const postId = tweetIdOf(article);
-    // У твита может быть несколько групп кнопок (у цитаты своя) — строка действий последняя
+    // A tweet can have several button groups (a quote has its own); the action row is the last one
     const group = [...article.querySelectorAll('[role="group"]')].at(-1);
     if (!postId || !group || group.querySelector('media-saver-button') || !hasMedia(article)) {
       continue;
     }
     const share = group.lastElementChild;
     const wrapper = document.createElement('div');
-    // Классы соседней кнопки — те же отступы и выравнивание, что у родных
+    // The neighboring button's classes give the same spacing and alignment as the native ones
     if (share) wrapper.className = share.className;
     wrapper.append(
       createInlineButton('row', {
@@ -77,11 +77,11 @@ function scan() {
   }
 }
 
-// ---- Контекстное меню: нажимаем ⬇ того твита, на котором кликнули ----
+// ---- Context menu: press ⬇ of the tweet that was clicked ----
 
 let contextArticle: Element | undefined;
 
-/** У твита одна кнопка — все медиа, поэтому любой пункт меню скачивает их. */
+/** A tweet has one button for all media, so any menu item downloads them. */
 function contextDownload() {
   const host = contextArticle?.querySelector<HTMLElement>('media-saver-button');
   if (host) triggerDownload(host);

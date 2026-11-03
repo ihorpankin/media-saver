@@ -17,7 +17,7 @@ const post = (postId: string, widths: number[]): MediaPost => ({
 });
 
 describe('createPostCache', () => {
-  it('оставляет копию лучшего качества', () => {
+  it('keeps the best-quality copy', () => {
     const cache = createPostCache();
     cache.add(post('a', [1080]));
     cache.add(post('a', [3000]));
@@ -25,14 +25,14 @@ describe('createPostCache', () => {
     expect(cache.get('a')?.items[0]?.width).toBe(3000);
   });
 
-  it('копия с большим числом элементов важнее качества', () => {
+  it('a copy with more items beats quality', () => {
     const cache = createPostCache();
     cache.add(post('a', [3000]));
     cache.add(post('a', [1080, 1080]));
     expect(cache.get('a')?.items).toHaveLength(2);
   });
 
-  it('копия с видео важнее копии с крупной обложкой', () => {
+  it('a copy with video beats a copy with a large cover', () => {
     const cache = createPostCache();
     const video: MediaPost = {
       site: 'instagram',
@@ -44,7 +44,7 @@ describe('createPostCache', () => {
     expect(cache.get('a')?.items[0]?.kind).toBe('video');
   });
 
-  it('вытесняет самые старые посты сверх лимита', () => {
+  it('evicts the oldest posts over the limit', () => {
     const cache = createPostCache(2);
     cache.add(post('a', [1]));
     cache.add(post('b', [1]));

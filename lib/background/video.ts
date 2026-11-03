@@ -3,14 +3,14 @@ import type { MediaItem } from '@/lib/core/media';
 import type { MuxRequest, MuxResponse, RevokeRequest } from '@/lib/core/messages';
 
 /*
- * Видео в полном качестве. Прогрессивный mp4 у Instagram почти всегда 720p, а в DASH есть
- * 1080p и выше, но видео и звук там раздельно. Дорожки склеивает offscreen document
- * (entrypoints/offscreen), а мы скачиваем готовый файл по его blob-ссылке.
+ * Video in full quality. Instagram's progressive mp4 is almost always 720p, while DASH has
+ * 1080p and higher, but with separate video and audio. The tracks are muxed by the offscreen document
+ * (entrypoints/offscreen), and we download the finished file by its blob URL.
  */
 
 let offscreenReady: Promise<void> | undefined;
 
-/** Создаёт offscreen document один раз: Chrome разрешает только один на расширение. */
+/** Creates the offscreen document once: Chrome allows only one per extension. */
 export function ensureOffscreen(): Promise<void> {
   offscreenReady ??= (async () => {
     if (await browser.offscreen.hasDocument()) return;
@@ -27,15 +27,15 @@ export function ensureOffscreen(): Promise<void> {
   return offscreenReady;
 }
 
-/** Ссылка, которую нужно скачать, и как прибраться после скачивания. */
+/** The URL to download and how to clean up afterwards. */
 export interface VideoSource {
   url: string;
   release?: () => void;
 }
 
 /**
- * Лучший вариант видео: DASH, если он крупнее прогрессивного mp4, иначе обычная ссылка.
- * Если со склейкой что-то не так, молча откатываемся на прогрессивный mp4 — пусть хуже, но скачается.
+ * The best video variant: DASH if it's larger than the progressive mp4, otherwise the regular URL.
+ * If muxing goes wrong, quietly fall back to the progressive mp4: worse, but it downloads.
  */
 export async function resolveVideo(item: MediaItem): Promise<VideoSource> {
   if (!item.dashManifest) return { url: item.url };
@@ -45,7 +45,7 @@ export async function resolveVideo(item: MediaItem): Promise<VideoSource> {
 
   const { video, audio } = pickDashTracks(tracks);
   if (!video) return { url: item.url };
-  // Видео без звука — DASH-дорожка уже готовый mp4, склеивать нечего
+  // Video without audio: the DASH track is already a finished mp4, nothing to mux
   if (!audio) return { url: video.url };
 
   try {

@@ -1,9 +1,9 @@
 import type { Settings } from '@/lib/core/settings';
 
 /*
- * Видео с YouTube качает не расширение, а yt-dlp на компьютере: веб-плеер YouTube отдаёт
- * потоки по протоколу SABR с одноразовыми токенами, и из браузера это постоянно ломается.
- * Связь — Native Messaging с хелпером из native-host/ (его ставит native-host/install.ps1).
+ * YouTube videos are downloaded not by the extension but by yt-dlp on the computer: YouTube's web player serves
+ * streams over the SABR protocol with one-time tokens, and from the browser this keeps breaking.
+ * The link is Native Messaging with the helper from native-host/ (installed by native-host/install.ps1).
  */
 
 const HOST = 'com.media_saver.ytdlp';
@@ -13,7 +13,7 @@ type HostMessage =
   | { type: 'done'; file?: string }
   | { type: 'error'; message: string };
 
-/** Понятное сообщение вместо системного, если хелпер не установлен. */
+/** A clear message instead of the system one if the helper isn't installed. */
 function explain(error: string | undefined): string {
   if (error?.includes('host not found')) {
     return `yt-dlp helper is not installed — run native-host\\install.ps1 (see README). Chrome: ${error}`;
@@ -24,7 +24,7 @@ function explain(error: string | undefined): string {
   return error ?? 'yt-dlp helper exited unexpectedly';
 }
 
-/** Скачивает ролик через yt-dlp. Прогресс в процентах приходит в onProgress. */
+/** Downloads a video with yt-dlp. Progress in percent arrives in onProgress. */
 export function downloadWithYtdlp(
   url: string,
   quality: Settings['videoQuality'],

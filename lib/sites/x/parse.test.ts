@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { bestVariant, originalPhotoUrl, parseX } from './parse';
 
-// Структура как в ответе UserTweets, значения выдуманы
+// Structure as in the UserTweets response, the values are made up
 const tweet = (id: string, media: unknown[], quoted?: unknown) => ({
   __typename: 'Tweet',
   rest_id: id,
@@ -67,7 +67,7 @@ const response = {
 };
 
 describe('parseX', () => {
-  it('твит с фото и видео: оригинал фото, лучший mp4', () => {
+  it('tweet with a photo and a video: original photo, best mp4', () => {
     const [post] = parseX(response);
     expect(post).toMatchObject({
       site: 'x',
@@ -89,7 +89,7 @@ describe('parseX', () => {
     });
   });
 
-  it('цитата с медиа — отдельный пост, твит без медиа пропускается', () => {
+  it('a quote with media is a separate post, a tweet without media is skipped', () => {
     expect(parseX(response).map((p) => p.postId)).toEqual(['1', '3']);
   });
 });
@@ -102,7 +102,7 @@ describe('helpers', () => {
     });
   });
 
-  it('bestVariant без mp4', () => {
+  it('bestVariant without mp4', () => {
     expect(bestVariant([{ content_type: 'application/x-mpegURL', url: 'x' }])).toBeUndefined();
   });
 });

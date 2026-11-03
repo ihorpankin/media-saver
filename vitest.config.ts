@@ -4,7 +4,7 @@ import { WxtVitest } from 'wxt/testing/vitest-plugin';
 export default defineConfig({
   plugins: [WxtVitest()],
   test: {
-    // Даты в именах файлов считаются по местному времени — фиксируем пояс, чтобы тесты не зависели от машины
+    // Dates in file names use local time, so the zone is fixed to keep tests machine-independent
     env: { TZ: 'UTC' },
   },
 });

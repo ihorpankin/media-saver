@@ -4,8 +4,8 @@ interface VideoJsPlayer {
   currentSources(): Array<{ src: string; type: string }>;
 }
 
-// LinkedIn: объект плеера video.js висит на его элементе (`.player`), но виден только
-// в JS страницы. По запросу linkedin.content.ts кладём ссылки на mp4 в атрибут плеера.
+// LinkedIn: the video.js player object hangs on its element (`.player`) but is visible only
+// to the page's JS. On request from linkedin.content.ts the mp4 links go into a player attribute.
 export default defineContentScript({
   matches: ['*://www.linkedin.com/*'],
   world: 'MAIN',

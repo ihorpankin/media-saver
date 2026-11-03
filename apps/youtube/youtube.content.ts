@@ -7,9 +7,9 @@ import type {
 import { videoIdFromUrl } from '@/lib/sites/youtube/thumbnail';
 import { createInlineButton, setProgress } from '@/lib/ui/download-button';
 
-// YouTube: под роликом, рядом с лайком и «Поделиться», кнопки «Видео» и «Превью».
-// Видео качает yt-dlp на компьютере через хелпер (native-host/), превью — само расширение.
-// В лентах и Shorts превью скачивается через контекстное меню (lib/background/context-menu.ts).
+// YouTube: "Video" and "Thumbnail" buttons under the video, next to Like and Share.
+// Videos are downloaded by yt-dlp on the computer through the helper (native-host/), thumbnails by the extension itself.
+// In feeds and Shorts the thumbnail is downloaded from the context menu (lib/background/youtube-menu.ts).
 
 const ROW = 'ytd-watch-metadata #top-level-buttons-computed';
 
@@ -20,8 +20,8 @@ function currentVideoId(): string {
 }
 
 async function downloadThumbnail() {
-  // Папка — адрес канала (@handle), как у видео из yt-dlp: под роликом на его странице,
-  // в Shorts — ссылка «@канал/shorts» поверх видео. Кириллические адреса приходят закодированными
+  // Folder is the channel handle (@handle), same as for yt-dlp videos: under the video on its page,
+  // in Shorts the "@channel/shorts" link over the video. Non-Latin handles arrive URL-encoded
   const handle = document
     .querySelector(
       'ytd-watch-metadata ytd-channel-name a[href^="/@"], yt-reel-player-overlay-view-model a[href^="/@"]',
@@ -37,11 +37,11 @@ async function downloadThumbnail() {
   await requestDownload(request);
 }
 
-/** Ролик, который сейчас качается, и его кнопка — чтобы показывать на ней проценты. */
+/** The video being downloaded and its button, to show the percentage on it. */
 let active: { url: string; host: HTMLElement } | undefined;
 
 async function downloadVideo(host: HTMLElement) {
-  // Отдаём yt-dlp чистую ссылку без плейлиста и времени
+  // Give yt-dlp a clean link without the playlist and timestamp
   const url = `https://www.youtube.com/watch?v=${currentVideoId()}`;
   active = { url, host };
   const request: YoutubeVideoRequest = { type: 'youtube-video', url };
@@ -52,7 +52,7 @@ async function downloadVideo(host: HTMLElement) {
   }
 }
 
-/** Кнопка в стиле YouTube: «таблетка» на фоне чипа, как у «Поделиться». */
+/** YouTube-style button: a "pill" on a chip background, like Share. */
 function pill(child: HTMLElement): HTMLElement {
   const wrapper = document.createElement('div');
   wrapper.style.cssText =
@@ -76,7 +76,7 @@ function createButtons(layout: 'row' | 'circle') {
   return [video, thumbnail];
 }
 
-/** Страница ролика: «таблетки» в строке под видео. */
+/** Video page: "pills" in the row under the video. */
 function scanWatch() {
   const row = document.querySelector(ROW);
   if (!row || row.querySelector('media-saver-button')) return;
@@ -84,8 +84,8 @@ function scanWatch() {
 }
 
 /**
- * Shorts: колонка справа «лайк, комментарии, поделиться, ремикс, звук». Ставим кнопки перед
- * «звуком» и берём цвета у соседней кнопки, чтобы попасть и в светлую, и в тёмную тему.
+ * Shorts: the right column "like, comments, share, remix, sound". Buttons go before
+ * "sound" and take colors from the neighboring button to match both light and dark themes.
  */
 function scanShorts() {
   if (!location.pathname.startsWith('/shorts/')) return;

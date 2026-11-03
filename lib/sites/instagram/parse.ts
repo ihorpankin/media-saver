@@ -2,9 +2,9 @@ import type { PageDataParser } from '@/lib/core/page-parser';
 import type { MediaItem, MediaPost } from '@/lib/core/media';
 
 /*
- * Разбор медиа-объектов Instagram. Структура одинаковая в REST (`/api/v1/…`), GraphQL-ответах
- * (`xdt_api__v1__…`) и встроенном JSON страницы, поэтому ищем объекты по форме, а не по пути.
- * Подробности — в docs/instagram.md.
+ * Parsing Instagram media objects. The structure is the same in REST (`/api/v1/…`), GraphQL responses
+ * (`xdt_api__v1__…`) and the page's embedded JSON, so objects are found by shape, not by path.
+ * Details are in docs/instagram.md.
  */
 
 interface IgCandidate {
@@ -36,7 +36,7 @@ const API_URL = /\/graphql\/query|\/api\/graphql|\/api\/v1\//;
 
 const SHORTCODE_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
 
-/** media pk → shortcode (base64 со своим алфавитом). */
+/** media pk → shortcode (base64 with its own alphabet). */
 export function shortcodeFromPk(pk: string): string {
   let n = BigInt(pk);
   let code = '';
@@ -48,8 +48,8 @@ export function shortcodeFromPk(pk: string): string {
 }
 
 /**
- * shortcode → media pk. У постов из закрытых аккаунтов к шорткоду бывает дописан хвост,
- * сам pk закодирован в первых 11 символах.
+ * shortcode → media pk. Posts from private accounts may have a tail appended to the shortcode,
+ * the pk itself is encoded in the first 11 characters.
  */
 export function pkFromShortcode(code: string): string {
   let n = 0n;
@@ -71,13 +71,13 @@ function isMedia(value: object): value is IgMedia {
 }
 
 /**
- * pk из строкового `id` (`<pk>_<user_id>`): числовой `pk` больше 2^53 теряет цифры в JSON.parse.
+ * pk from the string `id` (`<pk>_<user_id>`): a numeric `pk` above 2^53 loses digits in JSON.parse.
  */
 function pkOf(media: IgMedia): string {
   return String(media.id ?? media.pk).split('_')[0]!;
 }
 
-/** Длина параметра `stp`: чем короче, тем меньше серверной обработки и ближе к оригиналу. */
+/** Length of the `stp` parameter: the shorter it is, the less server processing and the closer to the original. */
 function stpLength(url: string): number {
   try {
     return new URL(url).searchParams.get('stp')?.length ?? 0;
@@ -86,7 +86,7 @@ function stpLength(url: string): number {
   }
 }
 
-/** Лучший кандидат: максимальная площадь, при равенстве — самый короткий `stp`. */
+/** The best candidate: the largest area, on a tie the shortest `stp`. */
 export function bestCandidate(candidates: IgCandidate[]): IgCandidate | undefined {
   return [...candidates]
     .filter((c) => c.url)
@@ -114,7 +114,7 @@ function toItem(media: IgMedia, index: number): MediaItem | undefined {
   };
 
   if (media.video_versions?.length) {
-    // В Reels и сторис у video_versions нет размеров — тогда берём первый, Instagram ставит лучший первым
+    // In Reels and stories video_versions have no sizes, so take the first one: Instagram puts the best first
     const video = bestCandidate(media.video_versions) ?? media.video_versions[0]!;
     return {
       ...common,
@@ -128,8 +128,8 @@ function toItem(media: IgMedia, index: number): MediaItem | undefined {
     };
   }
 
-  // Видео без video_versions встречается в сокращённых ответах: там есть только обложка.
-  // Обложку под видом видео не отдаём — дождёмся полной копии поста
+  // A video without video_versions shows up in shortened responses that only have the cover.
+  // Don't hand out the cover as the video; wait for a full copy of the post
   if (media.media_type === 2) return undefined;
 
   const image = bestCandidate(media.image_versions2?.candidates ?? []);
@@ -161,7 +161,7 @@ function toPost(media: IgMedia): MediaPost {
 
   return {
     site: 'instagram',
-    // Кнопка сторис ищет данные по pk из URL `/stories/<user>/<pk>/`, кнопка поста — по шорткоду
+    // The story button looks up data by the pk from the `/stories/<user>/<pk>/` URL, the post button by shortcode
     postId: isStory ? pk : code,
     author,
     takenAt: media.taken_at,
@@ -171,18 +171,18 @@ function toPost(media: IgMedia): MediaPost {
   };
 }
 
-/** Находит все посты в любом JSON Instagram. */
+/** Finds all posts in any Instagram JSON. */
 export function parseInstagram(json: unknown): MediaPost[] {
   const posts: MediaPost[] = [];
   const walk = (node: unknown, reel?: MediaPost['reel']) => {
-    // Встроенные данные иногда хранят целый ответ API строкой (`__bbox.result.response`
-    // у Explore) — раскрываем такие строки, если в них есть медиа
+    // Embedded data sometimes keeps a whole API response as a string (`__bbox.result.response`
+    // in Explore); such strings are unpacked if they contain media
     if (typeof node === 'string') {
       if (node.length > 100 && /^\s*[[{]/.test(node) && node.includes('image_versions2')) {
         try {
           walk(JSON.parse(node));
         } catch {
-          // Не JSON — обычный текст
+          // Not JSON, just text
         }
       }
       return;
@@ -193,14 +193,14 @@ export function parseInstagram(json: unknown): MediaPost[] {
       return;
     }
     if (isMedia(node)) {
-      // Слайды карусели разбираются внутри toPost, отдельными постами их не считаем
+      // Carousel slides are parsed inside toPost and aren't counted as separate posts
       const post = toPost(node);
       if (reel) post.reel = reel;
       if (post.items.length > 0) posts.push(post);
       return;
     }
-    // Лента историй: `{ id: "highlight:…" или pk автора, items: [история, …] }`.
-    // Запоминаем порядок: в адресе хайлайта нет id текущей истории, только её номер на экране
+    // Story reel: `{ id: "highlight:…" or the author pk, items: [story, …] }`.
+    // Remember the order: a highlight URL has no id of the current story, only its number on screen
     const { id, items } = node as { id?: unknown; items?: unknown };
     for (const [key, value] of Object.entries(node)) {
       if (

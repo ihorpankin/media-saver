@@ -14,7 +14,7 @@ describe('videoIdFromUrl', () => {
     expect(videoIdFromUrl(url)).toBe(id);
   });
 
-  it('не ролик', () => {
+  it('not a video', () => {
     expect(videoIdFromUrl('https://www.youtube.com/@channel')).toBeUndefined();
     expect(videoIdFromUrl('https://www.youtube.com/')).toBeUndefined();
     expect(videoIdFromUrl(undefined)).toBeUndefined();
@@ -22,7 +22,7 @@ describe('videoIdFromUrl', () => {
 });
 
 describe('thumbnailCandidates', () => {
-  it('от большего к меньшему', () => {
+  it('from largest to smallest', () => {
     expect(thumbnailCandidates('jNQXAC9IVRw')[0]).toBe(
       'https://i.ytimg.com/vi/jNQXAC9IVRw/maxresdefault.jpg',
     );

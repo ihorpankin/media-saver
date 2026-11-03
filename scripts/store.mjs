@@ -1,6 +1,6 @@
-// Архив Media Saver для Chrome Web Store: npm run zip:store
-// Та же сборка, что и npm run build, но без поля key в манифесте — его Web Store не принимает.
-// Результат — .output/media-saver-<версия>-chrome.zip.
+// Media Saver archive for the Chrome Web Store: npm run zip:store
+// The same build as npm run build, but without the key field in the manifest, which the Web Store rejects.
+// Result: .output/media-saver-<version>-chrome.zip.
 import { execSync } from 'node:child_process';
 
 execSync('npx wxt zip', { stdio: 'inherit', env: { ...process.env, MEDIA_SAVER_STORE: '1' } });

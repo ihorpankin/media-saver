@@ -2,10 +2,10 @@ import type { PageDataParser } from '@/lib/core/page-parser';
 import type { MediaItem, MediaPost } from '@/lib/core/media';
 
 /*
- * Разбор роликов TikTok. Один и тот же объект `itemStruct` приходит и во встроенных данных
- * страницы ролика (`__UNIVERSAL_DATA_FOR_REHYDRATION__`), и в лентах (`/api/…/item_list/`).
- * Видео: `video.bitrateInfo` — несколько качеств, каждое отдельный mp4 со звуком.
- * Фото-пост: `imagePost.images[]`.
+ * Parsing TikTok videos. The same `itemStruct` object comes both in the embedded data
+ * of the video page (`__UNIVERSAL_DATA_FOR_REHYDRATION__`) and in feeds (`/api/…/item_list/`).
+ * Video: `video.bitrateInfo` has several qualities, each a separate mp4 with audio.
+ * Photo post: `imagePost.images[]`.
  */
 
 interface TikTokPlayAddr {
@@ -58,7 +58,7 @@ function isItem(value: object): value is TikTokItem {
 const height = (b: TikTokBitrate) => Math.max(b.PlayAddr?.Width ?? 0, b.PlayAddr?.Height ?? 0);
 const isH264 = (b: TikTokBitrate) => (b.CodecType ?? '').startsWith('h264');
 
-/** Лучшее качество: наибольшее разрешение, потом битрейт. Отдельно — лучшее в H.264. */
+/** The best quality: the highest resolution, then bitrate. Separately, the best in H.264. */
 export function pickVideo(bitrates: TikTokBitrate[] = []) {
   const usable = bitrates.filter((b) => b.PlayAddr?.UrlList?.length);
   const order = (a: TikTokBitrate, b: TikTokBitrate) =>
@@ -108,7 +108,7 @@ function photoItems(item: TikTokItem): MediaItem[] {
 
 function toPost(item: TikTokItem): MediaPost {
   const author = typeof item.author === 'string' ? item.author : item.author?.uniqueId;
-  // Фото-пост: картинки; обычный ролик — видео
+  // Photo post: images; a regular video: the video
   const items = item.imagePost?.images?.length
     ? photoItems(item)
     : [videoItem(item)].filter((i) => i !== undefined);
@@ -123,7 +123,7 @@ function toPost(item: TikTokItem): MediaPost {
   };
 }
 
-/** Находит все ролики и фото-посты в любом JSON TikTok. */
+/** Finds all videos and photo posts in any TikTok JSON. */
 export function parseTikTok(json: unknown): MediaPost[] {
   const posts: MediaPost[] = [];
   const walk = (node: unknown) => {
