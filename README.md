@@ -17,6 +17,30 @@ YouTube is a separate extension, **Media Saver for YouTube**, in this same repos
 
 Files are saved to `Downloads/<site>/<author>/<id>_<n>.<ext>` (the template can be changed in the settings).
 
+## How to use
+
+### Instagram
+
+Open a post and press ⬇ in the action bar next to Like and Share: it downloads the slide you're looking at. For a carousel, "All N" next to it downloads every slide. On a post page where the bar is narrow, the count shows as a small badge on the ⬇ icon; click the badge to download them all.
+
+![Download button in Instagram's action bar](store-assets/1-instagram.png)
+
+When a photo's original is larger than the 1080px version in the feed, an "HD <width>" button appears and downloads the original. Videos come with sound in the best available quality. Stories and highlights have ⬇ in the header, and profile or Explore tiles show it over the preview on hover.
+
+### X (Twitter)
+
+⬇ sits in the tweet's action row and downloads all of the tweet's photos at original size, and its videos and GIFs as mp4.
+
+![Download button under a tweet on X](store-assets/2-x.png)
+
+### TikTok and LinkedIn
+
+On TikTok, ⬇ is in the column to the right of the video; on LinkedIn, in the post's action row after Send.
+
+### Right-click menu and settings
+
+Right-click a photo or video and choose **Media Saver ▸ Download**, **Download whole post** or **Download original (HD)**. The same submenu switches video quality and "Ask where to save" and opens **Settings…**, where you can change the file name template.
+
 ## How it works
 
 - `entrypoints/<site>-page.content.ts`: a script in the page context (MAIN world). It intercepts the data the site receives anyway (XHR/fetch, embedded JSON) and passes it to the content script.
