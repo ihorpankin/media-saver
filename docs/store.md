@@ -6,7 +6,7 @@
 
 1. `npm run zip:store` → `.output/media-saver-<версия>-chrome.zip` (сборка без поля `key`).
 2. Пройти [чек-лист](checklist.md) на этой версии.
-3. Опубликовать [политику конфиденциальности](privacy.md) по публичному адресу и вписать в неё контакт вместо `CONTACT_EMAIL`.
+3. Политика конфиденциальности ([privacy.md](privacy.md)) опубликована страницей: https://claude.ai/artifact/W9ads55qLVLhpSDB6B3nBh — в её меню Share нужно открыть доступ по ссылке. При изменении privacy.md обновить и страницу.
 4. [Chrome Web Store Developer Dashboard](https://chrome.google.com/webstore/devconsole) → новый элемент → загрузить zip, заполнить поля ниже.
 5. После публикации магазин выдаст расширению свой id — он будет отличаться от id локальной сборки (`obnhohflfmafplbppiampibaklfnhjpf`), это нормально.
 
@@ -62,7 +62,7 @@ Download photos and videos that the user has opened on Instagram, X, TikTok and 
 
 **Data usage:** collects none of the listed data types. Tick all three certifications (not sold to third parties, not used for unrelated purposes, not used for creditworthiness).
 
-**Privacy policy:** link to the published `docs/privacy.md`.
+**Privacy policy:** https://claude.ai/artifact/W9ads55qLVLhpSDB6B3nBh
 
 ## Риски проверки
 

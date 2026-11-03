@@ -10,4 +10,4 @@ Media Saver does not collect, store or transmit any personal data.
 - **Stored settings.** Your preferences (file name template, video quality, "ask where to save") are stored with `chrome.storage.sync` in your browser and synced by Chrome to your Google account if you have sync enabled. They are never sent anywhere else.
 - **Downloads.** Downloaded files are saved by Chrome to your Downloads folder.
 
-Contact: CONTACT_EMAIL
+Contact: [patsiuk.art@gmail.com](mailto:patsiuk.art@gmail.com)
