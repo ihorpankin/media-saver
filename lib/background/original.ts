@@ -33,7 +33,7 @@ async function fetchFullPost(postId: string): Promise<MediaPost> {
   try {
     return await new Promise<MediaPost>((resolve, reject) => {
       const timer = setTimeout(
-        () => reject(new Error('страница поста не ответила за 20 секунд')),
+        () => reject(new Error('the post page did not respond in 20 seconds')),
         TIMEOUT_MS,
       );
       pending.set(tabId, {
@@ -54,7 +54,7 @@ async function fetchFullPost(postId: string): Promise<MediaPost> {
 export async function handleOriginal({ post, index }: OriginalRequest): Promise<DownloadResponse> {
   const full = await fetchFullPost(post.postId);
   const item = full.items.find((i) => i.index === index);
-  if (!item) return { completed: 0, errors: [{ index, error: 'нет такого слайда в посте' }] };
+  if (!item) return { completed: 0, errors: [{ index, error: 'no such slide in the post' }] };
   // Имя файла как у обычного скачивания: автор и число слайдов берём из исходного поста
   return handleDownload({
     type: 'download',

@@ -64,7 +64,7 @@ function version(command, flag = '--version') {
 
 function download({ url, quality }) {
   if (!/^https:\/\/(www\.|m\.)?(youtube\.com|youtu\.be)\//.test(url ?? '')) {
-    send({ type: 'error', message: 'это не ссылка на YouTube' });
+    send({ type: 'error', message: 'not a YouTube link' });
     return process.exit(0);
   }
   const args = [
@@ -111,12 +111,12 @@ function download({ url, quality }) {
     if (error) lastError = error.replace(/^ERROR:\s*/, '');
   });
   child.on('error', () => {
-    send({ type: 'error', message: 'yt-dlp не найден — установите его (см. README)' });
+    send({ type: 'error', message: 'yt-dlp not found — install it (see README)' });
     process.exit(0);
   });
   child.on('close', (code) => {
     if (code === 0) send({ type: 'done', file });
-    else send({ type: 'error', message: lastError || `yt-dlp завершился с кодом ${code}` });
+    else send({ type: 'error', message: lastError || `yt-dlp exited with code ${code}` });
     process.exit(0);
   });
 }
@@ -131,7 +131,7 @@ process.stdin.on('data', (chunk) => {
   try {
     message = JSON.parse(buffer.subarray(4, 4 + length).toString('utf8'));
   } catch {
-    send({ type: 'error', message: 'хелпер получил некорректное сообщение' });
+    send({ type: 'error', message: 'the helper received a malformed message' });
     return process.exit(0);
   }
   buffer = buffer.subarray(4 + length);
@@ -143,7 +143,7 @@ process.stdin.on('data', (chunk) => {
   } else if (message.action === 'download') {
     download(message);
   } else {
-    send({ type: 'error', message: `неизвестная команда ${message.action}` });
+    send({ type: 'error', message: `unknown command ${message.action}` });
     process.exit(0);
   }
 });

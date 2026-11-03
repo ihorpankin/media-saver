@@ -16,12 +16,12 @@ type HostMessage =
 /** Понятное сообщение вместо системного, если хелпер не установлен. */
 function explain(error: string | undefined): string {
   if (error?.includes('host not found')) {
-    return `хелпер yt-dlp не установлен — запустите native-host\\install.ps1 (см. README). Chrome: ${error}`;
+    return `yt-dlp helper is not installed — run native-host\\install.ps1 (see README). Chrome: ${error}`;
   }
   if (error?.includes('Access to the specified native messaging host is forbidden')) {
-    return 'хелпер зарегистрирован для другого id расширения — запустите install.ps1 заново';
+    return 'the helper is registered for another extension id — run install.ps1 again';
   }
-  return error ?? 'хелпер yt-dlp неожиданно завершился';
+  return error ?? 'yt-dlp helper exited unexpectedly';
 }
 
 /** Скачивает ролик через yt-dlp. Прогресс в процентах приходит в onProgress. */

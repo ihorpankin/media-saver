@@ -3,7 +3,7 @@ import { defineConfig } from 'wxt';
 export default defineConfig({
   manifest: {
     name: 'Media Saver',
-    description: 'Скачивание медиа из соцсетей одним кликом',
+    description: 'Download photos and videos from Instagram, X, TikTok and LinkedIn in one click',
     // Публичный ключ фиксирует id расширения: obnhohflfmafplbppiampibaklfnhjpf.
     // Без него id зависел бы от папки, и при переносе сборки терялись бы настройки.
     // YouTube — отдельное расширение со своим конфигом: wxt.youtube.config.ts
@@ -29,6 +29,12 @@ export default defineConfig({
       // фото LinkedIn
       '*://media.licdn.com/*',
     ],
+  },
+  hooks: {
+    // Web Store не принимает манифест с полем key: id расширению он выдаёт сам (npm run zip:store)
+    'build:manifestGenerated': (_wxt, manifest) => {
+      if (process.env.MEDIA_SAVER_STORE) delete manifest.key;
+    },
   },
   webExt: {
     // Автозапуск Chrome через web-ext на Windows падает (CDP Extensions.loadUnpacked),

@@ -98,13 +98,13 @@ async function downloadPost(post: Element) {
   let items: MediaItem[];
   if (player) {
     const url = bestMp4(player);
-    if (!url) throw new Error('у видео нет mp4 (плеер ещё не загрузился?)');
+    if (!url) throw new Error('no mp4 for this video (player not loaded yet?)');
     // id ролика — тот же, что у обложки: …/playlist/vid/v2/<id>/mp4-720p-…
     postId = url.match(/\/playlist\/vid\/v2\/([^/]+)\//)?.[1] ?? 'video';
     items = [{ kind: 'video', mediaId: postId, index: 1, url, ext: 'mp4' }];
   } else {
     const urls = [...new Set(postImages(post).map(largestSrc))];
-    if (urls.length === 0) throw new Error('в посте нет ни фото, ни видео');
+    if (urls.length === 0) throw new Error('the post has no photos or videos');
     postId = imageId(urls[0]!);
     items = urls.map((url, i) => ({
       kind: 'image',
@@ -140,7 +140,7 @@ function scan() {
     wrapper.style.alignItems = 'center';
     wrapper.append(
       createInlineButton('row', {
-        title: video ? 'Скачать видео поста' : 'Скачать фото поста',
+        title: video ? 'Download video' : 'Download photos',
         onClick: () => downloadPost(post),
       }),
     );

@@ -50,7 +50,7 @@ export async function handleBytesDownload(
 ): Promise<DownloadResponse> {
   const { post, index, data, mime } = request;
   const item = post.items.find((i) => i.index === index);
-  if (!item) return { completed: 0, errors: [{ index, error: 'нет такого файла в посте' }] };
+  if (!item) return { completed: 0, errors: [{ index, error: 'no such file in the post' }] };
   const settings = await loadSettings();
   await ensureOffscreen();
   const blobRequest: BlobRequest = { type: 'offscreen-blob', data, mime };
@@ -101,7 +101,7 @@ export async function handleDownload(request: DownloadRequest): Promise<Download
   results.forEach((result, i) => {
     if (result.status === 'rejected') {
       const error = result.reason instanceof Error ? result.reason.message : String(result.reason);
-      console.warn('[media-saver] не скачался файл', items[i]!.url, error);
+      console.warn('[media-saver] file download failed', items[i]!.url, error);
       errors.push({ index: items[i]!.index, error });
     }
   });

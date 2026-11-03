@@ -4,13 +4,14 @@
 import { execSync } from 'node:child_process';
 import { cpSync, readFileSync, rmSync } from 'node:fs';
 
+// Основное расширение последним: сборка заодно обновляет типы в .wxt/, а их проверяет tsc
 const builds = [
-  ['wxt build', '.output/chrome-mv3', 'release/media-saver'],
   [
     'wxt build -c wxt.youtube.config.ts',
     '.output/youtube/chrome-mv3',
     'release/media-saver-youtube',
   ],
+  ['wxt build', '.output/chrome-mv3', 'release/media-saver'],
 ];
 
 for (const [command, from, to] of builds) {

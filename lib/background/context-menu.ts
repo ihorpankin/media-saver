@@ -29,14 +29,14 @@ const PAGES = [
 ];
 
 const DOWNLOADS: Array<[id: string, mode: DownloadMode, title: string]> = [
-  ['download-slide', 'slide', 'Скачать'],
-  ['download-all', 'all', 'Скачать весь пост'],
-  ['download-original', 'original', 'Скачать оригинал (HD)'],
+  ['download-slide', 'slide', 'Download'],
+  ['download-all', 'all', 'Download whole post'],
+  ['download-original', 'original', 'Download original (HD)'],
 ];
 
 export const QUALITY: Array<[id: string, value: Settings['videoQuality'], title: string]> = [
-  ['quality-best', 'best', 'Видео: лучшее качество'],
-  ['quality-compatible', 'compatible', 'Видео: совместимое (720p, H.264)'],
+  ['quality-best', 'best', 'Video: best quality'],
+  ['quality-compatible', 'compatible', 'Video: compatible (720p, H.264)'],
 ];
 
 const SAVE_AS = 'save-as';
@@ -67,7 +67,7 @@ async function build() {
   create({
     id: SAVE_AS,
     parentId: ROOT,
-    title: 'Спрашивать, куда сохранить',
+    title: 'Ask where to save',
     type: 'checkbox',
     checked: settings.saveAs,
     contexts: ['image', 'video', 'page'],
@@ -76,7 +76,7 @@ async function build() {
   create({
     id: OPTIONS,
     parentId: ROOT,
-    title: 'Все настройки…',
+    title: 'Settings…',
     contexts: ['image', 'video', 'page'],
   });
 }

@@ -189,7 +189,7 @@ function postFromDom(
 
 async function send(request: DownloadRequest | OriginalRequest): Promise<void> {
   const response = await requestDownload(request);
-  if (response.completed === 0) throw new Error('в данных поста нет этого медиа');
+  if (response.completed === 0) throw new Error('this media is not in the post data');
 }
 
 /** Как найти пост, к которому относится кнопка. */
@@ -220,7 +220,7 @@ async function loadPost(source: PostSource, slide: Slide | undefined): Promise<M
   const cached = resolvePost(source, slide);
   if (cached) return cached;
   const id = source.postId();
-  if (!id) throw new Error('нет данных об этой истории — обновите страницу');
+  if (!id) throw new Error('no data for this story — reload the page');
   const post = await fetchPost(id);
   cache.add(post);
   return post;
@@ -229,7 +229,7 @@ async function loadPost(source: PostSource, slide: Slide | undefined): Promise<M
 async function downloadSlide(source: PostSource) {
   const root = source.root();
   const slide = visibleSlide(root, source.postId());
-  if (!slide) throw new Error('не нашёл медиа в посте');
+  if (!slide) throw new Error('no photo or video found in the post');
   let post: MediaPost;
   try {
     post = await loadPost(source, slide);
@@ -238,7 +238,7 @@ async function downloadSlide(source: PostSource) {
     const id = source.postId();
     const { media } = slide;
     if (!id || !(media instanceof HTMLImageElement)) throw error;
-    console.warn('[media-saver] запасной запрос не удался, беру фото со страницы:', error);
+    console.warn('[media-saver] fallback request failed, taking the photo from the page:', error);
     await send({ type: 'download', post: postFromDom(id, { ...slide, media }, authorOf(root)) });
     return;
   }
@@ -264,11 +264,11 @@ function largerOriginal(source: PostSource) {
 
 async function downloadOriginal(source: PostSource) {
   const found = largerOriginal(source);
-  if (!found) throw new Error('у этого слайда нет оригинала крупнее');
+  if (!found) throw new Error('this slide has no larger original');
   await send({ type: 'download-original', post: found.post, index: found.item.index });
 }
 
-function buttonOptions(source: PostSource, title = 'Скачать'): DownloadButtonOptions {
+function buttonOptions(source: PostSource, title = 'Download'): DownloadButtonOptions {
   return {
     title,
     onClick: () => downloadSlide(source),
@@ -287,8 +287,8 @@ function buttonOptions(source: PostSource, title = 'Скачать'): DownloadBu
         return {
           text: `HD ${originalWidth}`,
           title:
-            `Сейчас ${width}px, оригинал ${originalWidth}px. ` +
-            'Пост на пару секунд откроется в фоновой вкладке',
+            `Now ${width}px, original ${originalWidth}px. ` +
+            'The post opens in a background tab for a couple of seconds',
         };
       },
       onClick: () => downloadOriginal(source),
@@ -572,7 +572,7 @@ function scanGrid() {
     const postId = shortcodeFromHref(tile.getAttribute('href'));
     if (!postId || largeMedia(tile).length === 0) continue;
     attachOverlayButton(tile, {
-      title: 'Скачать пост',
+      title: 'Download post',
       onClick: () => downloadAll({ postId: () => postId, root: () => tile }),
     });
   }
@@ -617,7 +617,7 @@ function mediaAtPoint(x: number, y: number): Element | undefined {
  * Если кнопки нет, а это картинка — ищем пост по имени файла или скачиваем её как есть.
  */
 async function contextDownload(request: ContextDownloadRequest) {
-  if (!contextTarget) throw new Error('под курсором нет фото или видео');
+  if (!contextTarget) throw new Error('no photo or video under the cursor');
   for (
     let el: Element | undefined = contextTarget;
     el && el !== document.body;
@@ -645,7 +645,7 @@ async function contextDownload(request: ContextDownloadRequest) {
       },
     });
   } else {
-    throw new Error('не нашёл, что скачать');
+    throw new Error('nothing to download here');
   }
 }
 
@@ -697,7 +697,7 @@ export default defineContentScript({
     browser.runtime.onMessage.addListener((message: ContextDownloadRequest) => {
       if (message?.type !== 'context-download') return;
       contextDownload(message).catch((error: unknown) =>
-        console.warn('[media-saver] скачивание из меню не удалось:', error),
+        console.warn('[media-saver] download from the menu failed:', error),
       );
     });
 

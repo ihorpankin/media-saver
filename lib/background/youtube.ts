@@ -14,5 +14,5 @@ export async function downloadThumbnail(
       return handleDownload({ type: 'download', post: thumbnailPost(videoId, url, author) });
     }
   }
-  return { completed: 0, errors: [{ index: 1, error: 'у ролика не нашлось превью' }] };
+  return { completed: 0, errors: [{ index: 1, error: 'no thumbnail found for this video' }] };
 }

@@ -27,14 +27,14 @@ function renderPreview() {
     ['#preview-single', 1],
   ] as const) {
     const post = sample(count);
-    $(id).textContent = `Загрузки/${buildFilename(post, post.items[0]!, value)}`;
+    $(id).textContent = `Downloads/${buildFilename(post, post.items[0]!, value)}`;
   }
 }
 
 let statusTimer: ReturnType<typeof setTimeout> | undefined;
 async function save(patch: Partial<Settings>) {
   await settingsItem.setValue({ ...(await loadSettings()), ...patch });
-  status.textContent = 'Сохранено';
+  status.textContent = 'Saved';
   clearTimeout(statusTimer);
   statusTimer = setTimeout(() => (status.textContent = ''), 1500);
 }

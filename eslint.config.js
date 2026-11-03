@@ -13,6 +13,6 @@ export default tseslint.config(
   // Скрипты сборки (npm run pack, npm run icons) — тоже Node
   {
     files: ['scripts/**/*.mjs'],
-    languageOptions: { globals: { console: 'readonly' } },
+    languageOptions: { globals: { console: 'readonly', process: 'readonly' } },
   },
 );

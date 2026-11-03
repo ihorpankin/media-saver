@@ -19,8 +19,8 @@ export async function muxVideoAudio(video: ArrayBuffer, audio: ArrayBuffer): Pro
   const audioInput = new Input({ source: new BufferSource(audio), formats: ALL_FORMATS });
   const videoTrack = await videoInput.getPrimaryVideoTrack();
   const audioTrack = await audioInput.getPrimaryAudioTrack();
-  if (!videoTrack?.codec) throw new Error('в видеодорожке нет видео');
-  if (!audioTrack?.codec) throw new Error('в аудиодорожке нет звука');
+  if (!videoTrack?.codec) throw new Error('video track has no video');
+  if (!audioTrack?.codec) throw new Error('audio track has no audio');
 
   const target = new BufferTarget();
   // fastStart: оглавление файла в начале, чтобы видео сразу играло в любом плеере
@@ -61,6 +61,6 @@ export async function muxVideoAudio(video: ArrayBuffer, audio: ArrayBuffer): Pro
   ]);
 
   await output.finalize();
-  if (!target.buffer) throw new Error('склейка не дала файла');
+  if (!target.buffer) throw new Error('muxing produced no file');
   return target.buffer;
 }

@@ -41,12 +41,12 @@ async function downloadVideo(post: MediaPost, item: MediaItem) {
     ),
   ].filter((u): u is string => Boolean(u));
 
-  let lastError = 'нет ссылки на видео';
+  let lastError = 'no video link';
   for (const url of urls) {
     const response = await fetch(url, { credentials: 'include' }).catch(() => undefined);
     const type = response?.headers.get('content-type') ?? '';
     if (!response?.ok || !type.startsWith('video/')) {
-      lastError = `сервер TikTok не отдал видео (${response?.status ?? 'нет ответа'})`;
+      lastError = `TikTok server did not return the video (${response?.status ?? 'no response'})`;
       continue;
     }
     const request: BytesDownloadRequest = {
@@ -64,7 +64,7 @@ async function downloadVideo(post: MediaPost, item: MediaItem) {
 
 async function download(postId: string) {
   const post = cache.get(postId);
-  if (!post) throw new Error('нет данных о ролике — прокрутите ленту или обновите страницу');
+  if (!post) throw new Error('no data for this video — scroll the feed or reload the page');
   const video = post.items.find((item) => item.kind === 'video');
   if (video) return downloadVideo(post, video);
   // Фото-пост: картинки с tiktokcdn отдаются и обычному скачиванию
@@ -88,8 +88,8 @@ function scanFeed() {
     if (!share || !column || !postId || column.querySelector('media-saver-button')) continue;
 
     const host = createInlineButton('circle', {
-      title: 'Скачать ролик',
-      label: 'Скачать',
+      title: 'Download video',
+      label: 'Download',
       onClick: () => download(postId),
     });
     // Цвет иконки и фон кружка — как у «поделиться», чтобы совпасть с темой TikTok
@@ -117,7 +117,7 @@ function scanTiles() {
     if (!postId || tile.getBoundingClientRect().height < 100 || !tile.querySelector('img, video')) {
       continue;
     }
-    attachOverlayButton(tile, { title: 'Скачать', onClick: () => download(postId) });
+    attachOverlayButton(tile, { title: 'Download', onClick: () => download(postId) });
   }
 }
 

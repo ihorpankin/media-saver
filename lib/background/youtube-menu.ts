@@ -35,7 +35,7 @@ async function build() {
   await browser.contextMenus.removeAll();
   const settings = await loadSettings();
   create({ id: ROOT, title: 'Media Saver for YouTube' });
-  create({ id: THUMBNAIL, parentId: ROOT, title: 'Скачать превью' });
+  create({ id: THUMBNAIL, parentId: ROOT, title: 'Download thumbnail' });
   create({ id: 'sep-1', parentId: ROOT, type: 'separator' });
   for (const [id, value, title] of QUALITY) {
     create({ id, parentId: ROOT, title, type: 'radio', checked: settings.videoQuality === value });
@@ -58,7 +58,7 @@ export function setupYoutubeMenu() {
         videoIdFromUrl(info.linkUrl) ?? videoIdFromUrl(info.srcUrl) ?? videoIdFromUrl(info.pageUrl);
       if (videoId) {
         void downloadThumbnail(videoId).then((r) => {
-          if (r.errors.length) console.warn('[media-saver] превью не скачалось:', r.errors);
+          if (r.errors.length) console.warn('[media-saver] thumbnail download failed:', r.errors);
         });
       }
       return;

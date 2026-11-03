@@ -18,7 +18,7 @@ export function ensureOffscreen(): Promise<void> {
       url: browser.runtime.getURL('/offscreen.html'),
       reasons: [browser.offscreen.Reason.BLOBS],
       justification:
-        'Склейка дорожек DASH и сохранение файлов, скачанных страницей, перед скачиванием',
+        'Muxing DASH video and audio tracks and saving files fetched by the page before download',
     });
   })().catch((error: unknown) => {
     offscreenReady = undefined;
@@ -61,7 +61,7 @@ export async function resolveVideo(item: MediaItem): Promise<VideoSource> {
       },
     };
   } catch (error) {
-    console.warn('[media-saver] DASH не получился, скачиваю обычный mp4:', error);
+    console.warn('[media-saver] DASH failed, downloading the regular mp4:', error);
     return { url: item.url };
   }
 }

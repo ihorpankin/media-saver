@@ -30,7 +30,7 @@ function appId(): string {
 
 async function request(pk: string): Promise<unknown> {
   if (Date.now() < blockedUntil) {
-    throw new Error('Instagram попросил притормозить — попробуйте через несколько минут');
+    throw new Error('Instagram asked to slow down — try again in a few minutes');
   }
   const wait = lastRequest + MIN_INTERVAL - Date.now();
   if (wait > 0) await new Promise((resolve) => setTimeout(resolve, wait));
@@ -42,15 +42,15 @@ async function request(pk: string): Promise<unknown> {
   });
   if (response.status === 429 || response.url.includes('/challenge/')) {
     blockedUntil = Date.now() + COOLDOWN;
-    throw new Error('Instagram попросил притормозить — попробуйте через несколько минут');
+    throw new Error('Instagram asked to slow down — try again in a few minutes');
   }
   if (response.url.includes('/accounts/login/') || response.status === 401) {
-    throw new Error('войдите в Instagram');
+    throw new Error('log in to Instagram');
   }
   if (response.status === 403 || response.status === 404) {
-    throw new Error('пост недоступен: удалён или закрытый аккаунт');
+    throw new Error('post unavailable: deleted or private account');
   }
-  if (!response.ok) throw new Error(`Instagram ответил HTTP ${response.status}`);
+  if (!response.ok) throw new Error(`Instagram responded with HTTP ${response.status}`);
   return response.json();
 }
 
@@ -63,7 +63,7 @@ export function fetchPost(id: string): Promise<MediaPost> {
   const result = queue.then(async () => {
     const posts = parseInstagram(await request(pk));
     const post = posts.find((p) => p.postId === id) ?? posts[0];
-    if (!post) throw new Error('в ответе Instagram нет этого поста');
+    if (!post) throw new Error('the post is missing from the Instagram response');
     return post;
   });
   queue = result.catch(() => {});

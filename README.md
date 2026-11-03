@@ -4,11 +4,11 @@
 
 ## Что умеет
 
-Кнопка ⬇ встраивается в родную панель действий поста; то же — в подменю «Media Saver» по правому клику.
+Кнопка ⬇ встраивается в родную панель действий поста; то же — в подменю «Media Saver» по правому клику. Интерфейс расширений — на английском.
 
 | Сайт      | Что скачивает                                                                              |
 | --------- | ------------------------------------------------------------------------------------------ |
-| Instagram | фото, карусели (текущий слайд или «Все N»), видео и Reels, сторис, хайлайты, оригинал «HD» |
+| Instagram | фото, карусели (текущий слайд или «All N»), видео и Reels, сторис, хайлайты, оригинал «HD» |
 | X         | фото в оригинале, видео и GIF                                                              |
 | TikTok    | видео и фото-посты                                                                         |
 | LinkedIn  | фото и видео из постов                                                                     |
@@ -47,7 +47,7 @@ npm run format
 
 ## Media Saver for YouTube
 
-Отдельное расширение: кнопки «Видео» и «Превью» под роликом и в Shorts, превью из любой ленты — по правому клику. Код — `apps/youtube/` и общий `lib/`, конфиг — `wxt.youtube.config.ts`.
+Отдельное расширение: кнопки «Video» и «Thumbnail» под роликом и в Shorts, превью из любой ленты — по правому клику. Код — `apps/youtube/` и общий `lib/`, конфиг — `wxt.youtube.config.ts`.
 
 ```bash
 npm run dev:youtube    # .output/youtube/chrome-mv3-dev, можно параллельно с npm run dev
@@ -68,7 +68,7 @@ powershell -ExecutionPolicy Bypass -File native-host\install.ps1
 
 `install.ps1` регистрирует хелпер для Chrome в реестре текущего пользователя (без прав администратора) и записывает точные пути к `node`, `yt-dlp` и `ffmpeg` (`host-run.bat`, `host-config.json`): Chrome запускает хелпер со своим PATH, который может быть старше установки yt-dlp. Если переустановили или обновили эти программы через winget и путь поменялся — запустите `install.ps1` ещё раз. Удалить регистрацию: `install.ps1 -Uninstall`.
 
-Видео сохраняются в `Загрузки\youtube\<канал>\<название> [id].mp4`. Качество выбирается в меню по правому клику: «Media Saver for YouTube ▸ Видео: …». Если YouTube начнёт отдавать ошибки про PO Token — обновите yt-dlp (`winget upgrade yt-dlp.yt-dlp`) и при необходимости поставьте плагин [bgutil-ytdlp-pot-provider](https://github.com/yt-dlp/yt-dlp/wiki/PO-Token-Guide).
+Видео сохраняются в `Загрузки\youtube\<канал>\<название> [id].mp4`. Качество выбирается в меню по правому клику: «Media Saver for YouTube ▸ Video: …». Если YouTube начнёт отдавать ошибки про PO Token — обновите yt-dlp (`winget upgrade yt-dlp.yt-dlp`) и при необходимости поставьте плагин [bgutil-ytdlp-pot-provider](https://github.com/yt-dlp/yt-dlp/wiki/PO-Token-Guide).
 
 ## Установка для постоянного использования
 
@@ -79,3 +79,7 @@ npm run pack
 Собирает оба расширения в постоянные папки `release/media-saver` и `release/media-saver-youtube`. Один раз: удалить dev-версии в `chrome://extensions` (у них тот же id), включить «Режим разработчика», «Загрузить распакованное расширение» → эти папки. Дальше после каждого `npm run pack` достаточно нажать ⟳ у расширения. Перед обновлением стоит пройтись по [чек-листу](docs/checklist.md).
 
 Иконки рисуются из `icons/*.svg` командой `npm run icons`.
+
+## Публикация в Chrome Web Store
+
+`npm run zip:store` собирает архив Media Saver без поля `key`. Тексты для карточки, обоснование разрешений и порядок действий — в [docs/store.md](docs/store.md), политика конфиденциальности — [docs/privacy.md](docs/privacy.md).

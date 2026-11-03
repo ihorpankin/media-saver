@@ -5,6 +5,8 @@
  * Живёт в Shadow DOM, чтобы стили сайта её не ломали, а наши стили не протекали на сайт.
  */
 
+import { showError } from './toast';
+
 /** `waiting` — медиа ещё грузится на странице, скачивать пока нечего. */
 type State = 'idle' | 'waiting' | 'loading' | 'done' | 'error';
 
@@ -75,7 +77,7 @@ const OVERLAY_STYLE = `
 `;
 
 export interface DownloadButtonOptions {
-  /** Что делать по клику. Ошибка из промиса покажется в подсказке кнопки. */
+  /** Что делать по клику. Ошибка из промиса покажется в подсказке кнопки и внизу экрана. */
   onClick: () => Promise<void>;
   title?: string;
   /** Подпись рядом с иконкой, например «Видео». Во время скачивания её место занимает процент. */
@@ -131,7 +133,7 @@ export function triggerDownload(host: HTMLElement, action: ButtonAction = 'slide
 
 function createControl(
   style: string,
-  { onClick, title = 'Скачать', label, all, original }: DownloadButtonOptions,
+  { onClick, title = 'Download', label, all, original }: DownloadButtonOptions,
 ): Control {
   const host = document.createElement('media-saver-button');
   const shadow = host.attachShadow({ mode: 'closed' });
@@ -160,20 +162,20 @@ function createControl(
   progressSetters.set(host, (percent) => {
     if (host.getAttribute('state') !== 'loading') return;
     labelSpan.textContent = `${percent}%`;
-    mainButton.title = `Скачивается… ${percent}%`;
+    mainButton.title = `Downloading… ${percent}%`;
   });
 
   waitingSetters.set(host, (waiting) => {
     const state = host.getAttribute('state');
-    if (waiting && state === 'idle') setState('waiting', 'Ждём, пока загрузится…');
+    if (waiting && state === 'idle') setState('waiting', 'Waiting for media to load…');
     else if (!waiting && state === 'waiting') setState('idle');
   });
 
   const refresh = () => {
     const count = all?.count() ?? 0;
     allButton.hidden = count < 2;
-    allButton.textContent = `Все ${count}`;
-    allButton.title = `Скачать все ${count}`;
+    allButton.textContent = `All ${count}`;
+    allButton.title = `Download all ${count}`;
 
     const hd = original?.label();
     originalButton.hidden = !hd;
@@ -185,24 +187,23 @@ function createControl(
     const current = host.getAttribute('state');
     if (current === 'loading' || current === 'waiting') return;
     clearTimeout(resetTimer);
-    setState('loading', 'Скачивается…');
+    setState('loading', 'Downloading…');
     try {
       await task();
-      setState('done', 'Готово');
+      setState('done', 'Done');
       resetTimer = setTimeout(() => setState('idle'), 2000);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      console.warn('[media-saver] скачивание не удалось:', error);
-      setState('error', `Ошибка: ${message}`);
+      console.warn('[media-saver] download failed:', error);
+      setState('error', `Error: ${message}`);
+      showError(message);
       resetTimer = setTimeout(() => setState('idle'), 5000);
     }
   };
   actions.set(host, (action) => {
     if (action === 'all' && all) void run(all.onClick);
     else if (action === 'original') {
-      void run(
-        original?.onClick ?? (() => Promise.reject(new Error('здесь нет оригинала крупнее'))),
-      );
+      void run(original?.onClick ?? (() => Promise.reject(new Error('no larger original here'))));
     } else void run(onClick);
   });
 

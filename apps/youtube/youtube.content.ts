@@ -15,7 +15,7 @@ const ROW = 'ytd-watch-metadata #top-level-buttons-computed';
 
 function currentVideoId(): string {
   const videoId = videoIdFromUrl(location.href);
-  if (!videoId) throw new Error('не нашёл id ролика в адресе');
+  if (!videoId) throw new Error('no video id in the address');
   return videoId;
 }
 
@@ -64,13 +64,13 @@ function pill(child: HTMLElement): HTMLElement {
 
 function createButtons(layout: 'row' | 'circle') {
   const video: HTMLElement = createInlineButton(layout, {
-    title: 'Скачать видео через yt-dlp',
-    label: 'Видео',
+    title: 'Download video with yt-dlp',
+    label: 'Video',
     onClick: () => downloadVideo(video),
   });
   const thumbnail = createInlineButton(layout, {
-    title: 'Скачать превью в максимальном разрешении',
-    label: 'Превью',
+    title: 'Download thumbnail in maximum resolution',
+    label: 'Thumbnail',
     onClick: downloadThumbnail,
   });
   return [video, thumbnail];

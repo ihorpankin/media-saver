@@ -26,8 +26,7 @@ function postFromDom(article: Element, postId: string): MediaPost {
   const images = [...article.querySelectorAll<HTMLImageElement>('img[src*="pbs.twimg.com/media/"]')]
     .filter((img) => !img.closest('[role="link"]:not(article)'))
     .map((img) => img.src);
-  if (images.length === 0)
-    throw new Error('нет данных о медиа — прокрутите ленту или обновите страницу');
+  if (images.length === 0) throw new Error('no media data — scroll the feed or reload the page');
   const author = article
     .querySelector('a[href*="/status/"] time')
     ?.closest('a')
@@ -70,7 +69,7 @@ function scan() {
     if (share) wrapper.className = share.className;
     wrapper.append(
       createInlineButton('row', {
-        title: 'Скачать фото и видео твита',
+        title: 'Download photos and videos',
         onClick: () => downloadTweet(article, postId),
       }),
     );

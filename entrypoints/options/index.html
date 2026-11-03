@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="ru">
+<html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Media Saver — настройки</title>
+    <title>Media Saver — Settings</title>
     <link rel="stylesheet" href="./style.css" />
   </head>
   <body>
@@ -11,40 +11,40 @@
       <h1>Media Saver</h1>
 
       <section>
-        <h2>Куда сохранять</h2>
-        <label for="template">Шаблон пути внутри папки «Загрузки»</label>
+        <h2>Where to save</h2>
+        <label for="template">Path template inside the Downloads folder</label>
         <input id="template" type="text" spellcheck="false" autocomplete="off" />
         <p class="hint">
-          Подстановки: <code>{site}</code> <code>{author}</code> <code>{postId}</code>
-          <code>{mediaId}</code> <code>{index}</code> <code>{date}</code>. <code>/</code> — папка.
-          Расширение файла добавится само.
+          Placeholders: <code>{site}</code> <code>{author}</code> <code>{postId}</code>
+          <code>{mediaId}</code> <code>{index}</code> <code>{date}</code>. <code>/</code> starts a
+          folder. The file extension is added automatically.
         </p>
         <p class="preview">
-          Например: <span id="preview-carousel"></span><br />
-          и для одиночного поста: <span id="preview-single"></span>
+          Example: <span id="preview-carousel"></span><br />
+          and for a single-item post: <span id="preview-single"></span>
         </p>
-        <button id="reset-template" type="button" class="link">Вернуть по умолчанию</button>
+        <button id="reset-template" type="button" class="link">Reset to default</button>
 
         <label class="check">
           <input id="save-as" type="checkbox" />
-          Спрашивать, куда сохранить (только при скачивании одного файла)
+          Ask where to save (only when downloading a single file)
         </label>
       </section>
 
       <section>
-        <h2>Качество видео</h2>
+        <h2>Video quality</h2>
         <label class="check">
           <input type="radio" name="video-quality" value="best" />
           <span>
-            <strong>Лучшее</strong> — до 1080p и выше. Instagram отдаёт такое видео в кодеке VP9:
-            Chrome, VLC и современные плееры его открывают, старые — нет.
+            <strong>Best</strong> — up to 1080p and higher. Instagram serves it in VP9 and TikTok in
+            H.265: Chrome, VLC and modern players open them, older players may not.
           </span>
         </label>
         <label class="check">
           <input type="radio" name="video-quality" value="compatible" />
           <span>
-            <strong>Совместимое</strong> — обычный mp4 до 720p в H.264. Откроется где угодно,
-            скачивается быстрее.
+            <strong>Compatible</strong> — a regular H.264 mp4, up to 720p on Instagram. Plays
+            anywhere and downloads faster.
           </span>
         </label>
       </section>

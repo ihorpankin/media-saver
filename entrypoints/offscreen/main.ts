@@ -6,7 +6,7 @@ import { muxVideoAudio } from '@/lib/offscreen/mux';
 
 async function download(url: string): Promise<ArrayBuffer> {
   const response = await fetch(url);
-  if (!response.ok) throw new Error(`дорожка не скачалась: HTTP ${response.status}`);
+  if (!response.ok) throw new Error(`track download failed: HTTP ${response.status}`);
   return response.arrayBuffer();
 }
 
@@ -16,7 +16,7 @@ async function mux(videoUrl: string, audioUrl: string): Promise<MuxResponse> {
     const result = await muxVideoAudio(video, audio);
     return { url: URL.createObjectURL(new Blob([result], { type: 'video/mp4' })) };
   } catch (error) {
-    console.warn('[media-saver] склейка не удалась:', error);
+    console.warn('[media-saver] muxing failed:', error);
     return { error: error instanceof Error ? error.message : String(error) };
   }
 }

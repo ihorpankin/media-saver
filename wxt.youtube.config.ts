@@ -11,7 +11,7 @@ export default defineConfig({
   dev: { server: { port: 3001 } },
   manifest: {
     name: 'Media Saver for YouTube',
-    description: 'Видео и превью с YouTube одним кликом (видео — через yt-dlp)',
+    description: 'Download YouTube videos and thumbnails in one click (videos via yt-dlp)',
     // Фиксирует id расширения: mbelopldolpphlmgglnhbpklcoopjhjj. Хелпер yt-dlp (native-host/)
     // пускает только этот id
     key: 'MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEArWdCBY9U4oFI0YFw6KaAARCdNvlNN1oChsEZQ0kWm+VUZNofVNF0lRjpbaTYalqbV+llVEz5/xM90V7A1WezcAPuNW6I9673N07BLDQ/f4OdgFyJ3GlHZQevXNqygRAKFNsBfzBvo437lximiRC+TjQt1sLvzAkVrW+PRH4EBhODp8acA3C/g13bq1yWLpcNBjjhc6Die0lg1aSMR/FXmsS2auWnCinL8qGSy+AbyFVrbQn2wtwwgWgV+4rzrmkWSsIYLwsYy8lCbMlXw3P+CLJEZiZD6+t/u4j0IYYsezTTXOAN9fqDaNuLC/cI3T0W4m+1fX3aOeVk51RJKv4GywIDAQAB',

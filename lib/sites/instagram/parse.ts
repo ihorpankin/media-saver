@@ -55,7 +55,7 @@ export function pkFromShortcode(code: string): string {
   let n = 0n;
   for (const char of code.slice(0, 11)) {
     const digit = SHORTCODE_ALPHABET.indexOf(char);
-    if (digit < 0) throw new Error(`не шорткод: ${code}`);
+    if (digit < 0) throw new Error(`not a shortcode: ${code}`);
     n = n * 64n + BigInt(digit);
   }
   return n.toString();
