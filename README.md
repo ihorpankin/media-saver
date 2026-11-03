@@ -70,8 +70,12 @@ powershell -ExecutionPolicy Bypass -File native-host\install.ps1
 
 Видео сохраняются в `Загрузки\youtube\<канал>\<название> [id].mp4`. Качество выбирается в меню по правому клику: «Media Saver for YouTube ▸ Видео: …». Если YouTube начнёт отдавать ошибки про PO Token — обновите yt-dlp (`winget upgrade yt-dlp.yt-dlp`) и при необходимости поставьте плагин [bgutil-ytdlp-pot-provider](https://github.com/yt-dlp/yt-dlp/wiki/PO-Token-Guide).
 
-## Установка сборки вручную
+## Установка для постоянного использования
 
-1. `npm run build`
-2. Открыть `chrome://extensions`, включить «Режим разработчика».
-3. «Загрузить распакованное расширение» → выбрать папку `.output/chrome-mv3`.
+```bash
+npm run pack
+```
+
+Собирает оба расширения в постоянные папки `release/media-saver` и `release/media-saver-youtube`. Один раз: удалить dev-версии в `chrome://extensions` (у них тот же id), включить «Режим разработчика», «Загрузить распакованное расширение» → эти папки. Дальше после каждого `npm run pack` достаточно нажать ⟳ у расширения. Перед обновлением стоит пройтись по [чек-листу](docs/checklist.md).
+
+Иконки рисуются из `icons/*.svg` командой `npm run icons`.

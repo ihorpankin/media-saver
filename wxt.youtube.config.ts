@@ -6,6 +6,7 @@ import { defineConfig } from 'wxt';
 //   npm run dev:youtube / build:youtube → .output/youtube/chrome-mv3(-dev)
 export default defineConfig({
   entrypointsDir: 'apps/youtube',
+  publicDir: 'apps/youtube/public',
   outDir: '.output/youtube',
   dev: { server: { port: 3001 } },
   manifest: {

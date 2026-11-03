@@ -1,5 +1,6 @@
 node_modules/
 .output/
+release/
 .wxt/
 .chrome-profile/
 # Манифест хелпера с абсолютным путём, его создаёт native-host/install.ps1
