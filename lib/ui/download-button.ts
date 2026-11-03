@@ -48,6 +48,12 @@ const INLINE_STYLE = `
   .main { padding: 8px; }
   :host([layout="column"]) .main { padding: 0; }
   .all:hover, .main:hover, .original:hover { opacity: .7; }
+  /* Компактно — когда в строке сайта нет места: только иконка, «Все N» — значком на её углу */
+  :host([compact]) { position: relative; }
+  :host([compact]) .main { padding: 0; }
+  :host([compact]) .original { display: none; }
+  :host([compact]) .all { position: absolute; top: -7px; right: -9px; min-width: 16px; height: 16px;
+    padding: 0 4px; border-radius: 8px; background: #0095f6; color: #fff; font-size: 10px; }
   /* Колонка Shorts: иконка в кружке, подпись под ней. Цвета задаёт вызывающий по соседней кнопке */
   :host([layout="circle"]) { flex-direction: column; }
   :host([layout="circle"]) .main { flex-direction: column; gap: 6px; padding: 0;
@@ -174,7 +180,7 @@ function createControl(
   const refresh = () => {
     const count = all?.count() ?? 0;
     allButton.hidden = count < 2;
-    allButton.textContent = `All ${count}`;
+    allButton.textContent = host.hasAttribute('compact') ? String(count) : `All ${count}`;
     allButton.title = `Download all ${count}`;
 
     const hd = original?.label();
@@ -230,16 +236,31 @@ function createControl(
 /**
  * Кнопка для панели действий сайта. Вызывающий сам вставляет `host` в нужное место.
  * Цвет наследуется от панели, поэтому кнопка выглядит как родная и в светлой, и в тёмной теме.
+ *
+ * `fitWithin` — строка сайта, в которой стоит кнопка. Если с полной кнопкой она переполняется
+ * (узкая колонка поста, где у иконок ещё и счётчики), кнопка становится компактной.
  */
 export function createInlineButton(
   layout: 'row' | 'column' | 'circle',
   options: DownloadButtonOptions,
+  fitWithin?: Element,
 ): HTMLElement {
   const { host, refresh } = createControl(INLINE_STYLE, options);
   host.setAttribute('layout', layout);
-  refresh();
+
+  const update = () => {
+    if (fitWithin) {
+      host.removeAttribute('compact');
+      refresh();
+      if (fitWithin.scrollWidth > fitWithin.clientWidth + 1) host.setAttribute('compact', '');
+    }
+    refresh();
+  };
+  // Ширина самой строки задаётся страницей, а не кнопкой, поэтому переключение не зацикливается
+  if (fitWithin) new ResizeObserver(update).observe(fitWithin);
+  update();
   // Данные поста могут прийти позже, чем появилась панель: пересчитываем при наведении
-  host.addEventListener('mouseenter', refresh);
+  host.addEventListener('mouseenter', update);
   return host;
 }
 

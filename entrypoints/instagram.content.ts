@@ -366,7 +366,11 @@ function attachToRow(slot: RowSlot, source: PostSource) {
     slot.container,
     slot.before,
     slot.template,
-    createInlineButton('row', buttonOptions(source)),
+    createInlineButton(
+      'row',
+      buttonOptions(source),
+      slot.container.closest('section') ?? undefined,
+    ),
   );
 }
 
