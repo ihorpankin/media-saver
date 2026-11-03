@@ -38,9 +38,9 @@ Download photos and videos from Instagram, X, TikTok and LinkedIn in one click �
 >
 > The extension only downloads what you have opened and see on screen. No bulk downloads, no analytics, no data collection. Please respect creators: download for personal use and don't repost other people's content without permission.
 
-**Screenshots (1280×800, 1–5):** the button in the Instagram feed; a carousel with "All N" and "HD"; Reels; a post on X; the settings page.
+**Screenshots (1280×800, 1–5):** `store-assets/1-instagram.png`, `store-assets/2-x.png` (posts by NASA, public domain).
 
-**Small promo tile (440×280):** icon + "Media Saver".
+**Small promo tile (440×280):** `store-assets/promo-440x280.png`.
 
 ## Вкладка Privacy
 
