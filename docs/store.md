@@ -6,9 +6,9 @@ Texts for the store form, to copy as is. The YouTube extension doesn't go to the
 
 1. `npm run zip:store` → `.output/media-saver-<version>-chrome.zip` (a build without the `key` field).
 2. Go through the [checklist](checklist.md) on this version.
-3. The privacy policy ([privacy.md](privacy.md)) is published as a page: https://claude.ai/artifact/W9ads55qLVLhpSDB6B3nBh (link access is turned on in its Share menu). When privacy.md changes, update the page too.
+3. The privacy policy is [privacy.md](privacy.md); the store form links to it on GitHub: https://github.com/ihorpankin/media-saver/blob/main/docs/privacy.md. The store rejected a claude.ai page for this field, so keep a plain public page here.
 4. [Chrome Web Store Developer Dashboard](https://chrome.google.com/webstore/devconsole) → new item → upload the zip, fill in the fields below.
-5. After publishing, the store gives the extension its own id. It differs from the local build's id (`obnhohflfmafplbppiampibaklfnhjpf`), that's expected.
+5. The store gives the extension its own id: `jpgpeggjkhhohchdghdhjllknpiegckp`. It differs from the local build's id (`obnhohflfmafplbppiampibaklfnhjpf`), that's expected.
 
 Updating: bump `version` in `package.json` (`npm version patch`), run `npm run zip:store` again, upload the new zip.
 
@@ -62,7 +62,7 @@ Download photos and videos that the user has opened on Instagram, X, TikTok and 
 
 **Data usage:** collects none of the listed data types. Tick all three certifications (not sold to third parties, not used for unrelated purposes, not used for creditworthiness).
 
-**Privacy policy:** https://claude.ai/artifact/W9ads55qLVLhpSDB6B3nBh
+**Privacy policy:** https://github.com/ihorpankin/media-saver/blob/main/docs/privacy.md
 
 ## Review risks
 
